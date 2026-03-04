@@ -54,7 +54,9 @@ module riscv_gnt_stall #(
 
 
   import cv32e40p_pkg::*;
+  `ifndef VERILATOR
   import perturbation_pkg::*;
+  `endif
 
   logic   req_core_i_q;
   logic   grant_core_o_q;
