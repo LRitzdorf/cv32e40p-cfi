@@ -44,6 +44,15 @@ VSIM_DEBUG_FLAGS	= -debugdb
 VSIM_GUI_FLAGS          = -gui -debugdb
 VSIM_SCRIPT             = vsim.tcl
 
+# Verilator configuration
+VERI_OBJ		= obj_dir
+VERILATOR		= verilator
+VERI_CFLAGS		=  # user defined
+VERI_COMPILE_FLAGS	= --timing -Wno-BLKANDNBLK -Wno-MULTIDRIVEN -Wno-COMBDLY
+VERI_EXE_FLAGS		= +vcd
+ALL_VERI_EXE_FLAGS	= $(VERI_EXE_FLAGS)
+VERI_EXE_DEBUG_FLAGS	= --runtime-debug
+
 # RTL source files
 RTLSRC_HOME             := ../..
 export DESIGN_RTL_DIR = $(RTLSRC_HOME)/rtl
@@ -63,9 +72,16 @@ RTLSRC_FPNEW		:= $(filter-out $(RTLSRC_HOME)/rtl/fpnew/src/fpnew_pkg.sv, $(wildc
 RTLSRC_VLOG_TB_TOP	:= $(basename $(notdir $(RTLSRC_TB_TOP)))
 RTLSRC_VOPT_TB_TOP	:= $(addsuffix _vopt, $(RTLSRC_VLOG_TB_TOP))
 
+RTLSRC_VERI		:= tb_top.sv \
+			   cv32e40p_tb_subsystem.sv \
+			   riscv_rvalid_stall.sv \
+			   riscv_gnt_stall.sv \
+			   mm_ram.sv \
+			   dp_ram.sv
+
 # riscv toolchain install path
 RISCV                    ?= ~/.riscv
-RISCV_EXE_PREFIX         = $(RISCV)/bin/riscv32-unknown-elf-
+RISCV_EXE_PREFIX         ?= $(RISCV)/bin/riscv32-unknown-elf-
 
 # assume vsim if no target chosen
 .DEFAULT_GOAL := custom-vsim-run
@@ -147,6 +163,7 @@ vsim-run-gui: vsim-all
 .PHONY: tb-clean
 tb-clean:
 	if [ -d $(VWORK) ]; then rm -r $(VWORK); fi
+	if [ -d $(VERI_OBJ) ]; then rm -r $(VERI_OBJ); fi
 	rm -f transcript vsim.wlf vsim.dbg trace_core*.log \
 	.build-rtl .opt-rtl .lib-rtl *.vcd objdump
 
@@ -187,10 +204,8 @@ vsim-run-gui-pulp: vsim-all-pulp
 	$(RTLSRC_VOPT_TB_TOP) -do $(VSIM_SCRIPT)
 
 .PHONY: tb-clean-fp
-tb-clean-fp:
-	if [ -d $(VWORK) ]; then rm -r $(VWORK); fi
-	rm -rf transcript vsim.wlf vsim.dbg trace_core*.log \
-	.build-rtl-fp .opt-rtl-fp .lib-rtl-fp *.vcd objdump
+tb-clean-fp: tb-clean
+	rm -rf .build-rtl-fp .opt-rtl-fp .lib-rtl-fp
 
 # rules to generate hex (loadable by simulators) from elf
 %.hex: %.elf
@@ -309,6 +324,30 @@ hwlp-vsim-run: vsim-run-pulp
 hwlp-vsim-run-gui: vsim-all-pulp hwlp_test/hwlp_test.hex
 hwlp-vsim-run-gui: ALL_VSIM_FLAGS += "+firmware=hwlp_test/hwlp_test.hex"
 hwlp-vsim-run-gui: vsim-run-gui-pulp
+
+
+# Verilator targets
+.PHONY: veri-build
+$(VERI_OBJ)/Vtb_top \
+veri-build: $(RTLSRC_VERI)
+	$(VERILATOR) --binary --sv --trace-vcd \
+		--Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP \
+		--top-module tb_top \
+		$(RTLSRC_VERI) \
+		-f $(CV_CORE_MANIFEST) \
+		$(RTLSRC_HOME)/bhv/cv32e40p_core_log.sv \
+		--Mdir $(VERI_OBJ) \
+		-CFLAGS "-std=gnu++14 $(VERI_CFLAGS)" \
+		$(VERI_COMPILE_FLAGS)
+
+veri-run: $(VERI_OBJ)/Vtb_top
+	$(VERI_OBJ)/Vtb_top $(ALL_VERI_EXE_FLAGS)
+
+.PHONY: custom-veri-run
+custom-veri-run: veri-build custom/hello_world.hex
+custom-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/hello_world.hex"
+custom-veri-run: veri-run
+
 
 # general targets
 .PHONY: clean

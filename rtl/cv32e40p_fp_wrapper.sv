@@ -38,7 +38,12 @@ module cv32e40p_fp_wrapper
 
 
   import cv32e40p_pkg::*;
+  // Just skip this in Verilator, since we aren't running FP-enabled
+  // simulations for now, and keeping it requires pulling in all the FP
+  // dependencies even for non-FP builds
+  `ifndef VERILATOR
   import fpnew_pkg::*;
+  `endif
 
   logic [        fpnew_pkg::OP_BITS-1:0] fpu_op;
   logic                                  fpu_op_mod;
