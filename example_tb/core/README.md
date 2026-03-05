@@ -37,6 +37,7 @@ VSIM_FLAGS="-gui -debugdb"`.
 
 Running with other simulators
 ----------------------
+Verilator currently has preliminary support for non-floating-point test cases.
 Other simulator and more extensive test cases are supported in https://github.com/openhwgroup/core-v-verif
 
 Options

@@ -165,7 +165,8 @@ tb-clean:
 	if [ -d $(VWORK) ]; then rm -r $(VWORK); fi
 	if [ -d $(VERI_OBJ) ]; then rm -r $(VERI_OBJ); fi
 	rm -f transcript vsim.wlf vsim.dbg trace_core*.log \
-	.build-rtl .opt-rtl .lib-rtl *.vcd objdump
+	.build-rtl .opt-rtl .lib-rtl .veri-build .veri-build-pulp \
+	*.vcd objdump
 
 # run tb and exit
 .PHONY: vsim-run-fp
@@ -274,6 +275,7 @@ custom-fp-vsim-run-gui: vsim-run-gui-fp
 # compile and run interrupt
 interrupt/interrupt.elf: interrupt/interrupt.c
 	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
+		-Wno-int-conversion \
 		${CUSTOM_GCC_FLAGS} \
 		-T custom/link.ld  \
 		-static \
@@ -328,8 +330,9 @@ hwlp-vsim-run-gui: vsim-run-gui-pulp
 
 # Verilator targets
 .PHONY: veri-build
-$(VERI_OBJ)/Vtb_top \
-veri-build: $(RTLSRC_VERI)
+veri-build: .veri-build
+
+.veri-build: $(RTLSRC_VERI)
 	$(VERILATOR) --binary --sv --trace-vcd \
 		--Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP \
 		--top-module tb_top \
@@ -339,14 +342,51 @@ veri-build: $(RTLSRC_VERI)
 		--Mdir $(VERI_OBJ) \
 		-CFLAGS "-std=gnu++14 $(VERI_CFLAGS)" \
 		$(VERI_COMPILE_FLAGS)
+	rm -f .veri-build-pulp
+	touch .veri-build
 
+.PHONY: veri-build-pulp
+veri-build-pulp: .veri-build-pulp
+
+.veri-build-pulp: $(RTLSRC_VERI)
+	$(VERILATOR) --binary --sv --trace-vcd \
+		--Wno-lint --Wno-UNOPTFLAT --Wno-MODDUP \
+		--top-module tb_top \
+		$(RTLSRC_VERI) \
+		-f $(CV_CORE_MANIFEST) \
+		$(RTLSRC_HOME)/bhv/cv32e40p_core_log.sv \
+		--Mdir $(VERI_OBJ) \
+		-CFLAGS "-std=gnu++14 $(VERI_CFLAGS)" \
+		-GCOREV_PULP=1 \
+		$(VERI_COMPILE_FLAGS)
+	rm -f .veri-build
+	touch .veri-build-pulp
+
+.PHONY: veri-run
 veri-run: $(VERI_OBJ)/Vtb_top
 	$(VERI_OBJ)/Vtb_top $(ALL_VERI_EXE_FLAGS)
+
+# Warn the user if no Verilated executable was built yet
+$(VERI_OBJ)/Vtb_top:
+	@echo "Makefile target misuse: attempted to run a nonexistent Verilated executable!"
+	@echo "Ensure you perform a Verilator build before running."
 
 .PHONY: custom-veri-run
 custom-veri-run: veri-build custom/hello_world.hex
 custom-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/hello_world.hex"
 custom-veri-run: veri-run
+
+# TODO: custom-fp-veri-run, requires new PULP-vendored FP library to compile
+
+.PHONY: interrupt-veri-run
+interrupt-veri-run: veri-build interrupt/interrupt.hex
+interrupt-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=interrupt/interrupt.hex"
+interrupt-veri-run: veri-run
+
+.PHONY: hwlp-veri-run
+hwlp-veri-run: veri-build-pulp hwlp_test/hwlp_test.hex
+hwlp-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=hwlp_test/hwlp_test.hex"
+hwlp-veri-run: veri-run
 
 
 # general targets
