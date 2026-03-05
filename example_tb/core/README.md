@@ -22,6 +22,7 @@ It is strongly recommended you use the [RISC-V GNU
 Toolchain](https://github.com/riscv/riscv-gnu-toolchain) for that (follow the
 `Installation (Newlib)` section) and point your `RISCV` environment variable to
 it.
+(If you need to override the compiler prefix as well, i.e. if your GCC is named something other than `riscv32-unknown-elf-gcc`, set `RISCV_EXE_PREFIX` to something of the form `/path/to/your/riscv64-elf-` instead.)
 
 We have prepared a 'Hello World' program which you can run in the testbench. It
 demonstrates how you can run your own programs. Call `custom-vsim-run`  to
@@ -43,8 +44,7 @@ Options
 A few plusarg options are supported.
 * `+verbose` to show all memory read and writes and other miscellaneous information.
 
-* `+vcd` to produce a vcd file called `riscy_tb.vcd`. Verilator always produces
-  a vcd file called `verilator_tb.vcd`.
+* `+vcd` to produce a vcd file called `trace.vcd`.
 
 Examples
 -----------------------

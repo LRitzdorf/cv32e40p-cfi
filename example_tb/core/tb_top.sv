@@ -59,7 +59,7 @@ module tb_top #(
   // allow vcd dump
   initial begin
     if ($test$plusargs("vcd")) begin
-      $dumpfile("riscy_tb.vcd");
+      $dumpfile("trace.vcd");
       $dumpvars(0, tb_top);
     end
   end
