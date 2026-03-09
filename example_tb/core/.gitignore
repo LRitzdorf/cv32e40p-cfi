@@ -14,3 +14,8 @@ csrc
 inter.vpd
 ucli.key
 vc_hdrs.h
+
+# Simulator products
+work/
+obj_dir/
+trace.vcd
