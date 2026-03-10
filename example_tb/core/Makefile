@@ -225,8 +225,7 @@ tb-clean-fp: tb-clean
 # We link with our custom crt0.s and syscalls.c against newlib so that we can
 # use the c standard library
 custom/%.elf: custom/%.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -fcf-protection=branch \
-		-o $@ -w -Os -g -nostdlib \
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
 		$(CUSTOM_GCC_FLAGS) \
 		-T custom/link.ld \
 		-static \
@@ -388,6 +387,13 @@ custom-veri-run: veri-run
 interrupt-veri-run: veri-build interrupt/interrupt.hex
 interrupt-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=interrupt/interrupt.hex"
 interrupt-veri-run: veri-run
+
+.PHONY: cfi-veri-run
+cfi-veri-run: VERI_COMPILE_FLAGS += -GZICFI=1
+cfi-veri-run: CUSTOM_GCC_FLAGS += -fcf-protection=branch
+cfi-veri-run: veri-build custom/indirect_jumps.hex
+cfi-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/indirect_jumps.hex"
+cfi-veri-run: veri-run
 
 .PHONY: hwlp-veri-run
 hwlp-veri-run: veri-build-pulp hwlp_test/hwlp_test.hex
