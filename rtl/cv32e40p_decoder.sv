@@ -2910,11 +2910,7 @@ module cv32e40p_decoder
 
             // Machine security configuration
             CSR_MSECCFG :
-                if (!ZICFI) begin
-                  csr_illegal = 1'b1;
-                end else begin
-                  csr_status_o = 1'b1;
-                end
+              csr_status_o = 1'b1;
 
             // Debug register access
             CSR_DCSR,

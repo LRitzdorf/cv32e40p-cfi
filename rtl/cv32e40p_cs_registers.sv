@@ -357,7 +357,7 @@ module cv32e40p_cs_registers
         // mcounteren: Machine Counter-Enable
         CSR_MCOUNTEREN: csr_rdata_int = mcounteren_q;
         // mseccfg: Machine Security Configuration
-        CSR_MSECCFG: csr_rdata_int = ZICFI ? {29'b0, mseccfg_q[2], 2'b0} : '0;
+        CSR_MSECCFG: csr_rdata_int = ZICFI ? mseccfg_q : '0;
 
         CSR_TSELECT, CSR_TDATA3, CSR_MCONTEXT, CSR_SCONTEXT: csr_rdata_int = 'b0;  // Always read 0
         CSR_TDATA1: csr_rdata_int = tmatch_control_rdata;
@@ -526,7 +526,7 @@ module cv32e40p_cs_registers
         // unimplemented, read 0 CSRs
         CSR_MTVAL: csr_rdata_int = 'b0;
         // mseccfg: Machine Security Configuration
-        CSR_MSECCFG: csr_rdata_int = (ZICFI == 1) ? {29'b0, mseccfg_q[2], 2'b0} : '0;
+        CSR_MSECCFG: csr_rdata_int = (ZICFI == 1) ? mseccfg_q : '0;
 
         CSR_TSELECT, CSR_TDATA3, CSR_MCONTEXT, CSR_SCONTEXT: csr_rdata_int = 'b0;  // Always read 0
         CSR_TDATA1: csr_rdata_int = tmatch_control_rdata;
