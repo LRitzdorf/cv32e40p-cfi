@@ -48,7 +48,8 @@ VSIM_SCRIPT             = vsim.tcl
 VERI_OBJ		= obj_dir
 VERILATOR		= verilator
 VERI_CFLAGS		=  # user defined
-VERI_COMPILE_FLAGS	= --timing -Wno-BLKANDNBLK -Wno-MULTIDRIVEN -Wno-COMBDLY
+VERI_COMPILE_FLAGS	?=
+ALL_VERI_COMPILE_FLAGS	= --timing -Wno-BLKANDNBLK -Wno-MULTIDRIVEN -Wno-COMBDLY $(VERI_COMPILE_FLAGS)
 VERI_EXE_FLAGS		= +vcd
 ALL_VERI_EXE_FLAGS	= $(VERI_EXE_FLAGS)
 VERI_EXE_DEBUG_FLAGS	= --runtime-debug
@@ -80,16 +81,17 @@ RTLSRC_VERI		:= tb_top.sv \
 			   dp_ram.sv
 
 # riscv toolchain install path
-# RISCV                    ?= ~/.riscv
-# RISCV_EXE_PREFIX         ?= $(RISCV)/bin/riscv32-unknown-elf-
-RISCV                    ?= /opt/homebrew/opt/riscv-gnu-toolchain
-RISCV_EXE_PREFIX         ?= $(RISCV)/bin/riscv64-unknown-elf-
+RISCV                    ?= ~/.riscv
+RISCV_NAME               ?= riscv32-unknown-elf
+RISCV_EXE_PREFIX         ?= $(RISCV)/bin/$(RISCV_NAME)-
 
 # assume vsim if no target chosen
 .DEFAULT_GOAL := custom-vsim-run
+# and the default binary if not otherwise specified
+CUSTOM_PROGRAM ?= hello_world
 
 # GCC configuration
-CUSTOM_GCC_FLAGS           =
+CUSTOM_GCC_FLAGS          ?=
 
 all: custom-vsim-run
 
@@ -222,40 +224,30 @@ tb-clean-fp: tb-clean
 # This is an example for running a Hello World in the testbench
 # We link with our custom crt0.s and syscalls.c against newlib so that we can
 # use the c standard library
-custom/hello_world.elf: custom/hello_world.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -fcf-protection=branch -o $@ -w -Os -g -nostdlib \
+custom/%.elf: custom/%.c
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -fcf-protection=branch \
+		-o $@ -w -Os -g -nostdlib \
 		$(CUSTOM_GCC_FLAGS) \
 		-T custom/link.ld \
 		-static \
 		custom/crt0.S \
 		$^ mem_stall/mem_stall.c custom/syscalls.c custom/vectors.S \
-		-I $(RISCV)/riscv32-unknown-elf/include \
+		-I $(RISCV)/$(RISCV_NAME)/include \
 		-I mem_stall \
-		-L $(RISCV)/riscv32-unknown-elf/lib \
+		-L $(RISCV)/$(RISCV_NAME)/lib/rv32im/ilp32 \
 		-lc -lm -lgcc
 
-custom/happy.elf: custom/happy.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -fcf-protection=branch -o $@ -w -Os -g -nostdlib \
-		$(CUSTOM_GCC_FLAGS) \
-		-T custom/link.ld \
-		-static \
-		custom/crt0.S \
-		$^ mem_stall/mem_stall.c custom/syscalls.c custom/vectors.S \
-		-I $(RISCV)/riscv32-unknown-elf/include \
-		-I mem_stall \
-		-L $(RISCV)/riscv32-unknown-elf/lib \
-		-lc -lm -lgcc
 custom-clean:
 	rm -rf custom/*.elf custom/*.hex
 
 .PHONY: custom-vsim-run
-custom-vsim-run: vsim-all custom/hello_world.hex
-custom-vsim-run: ALL_VSIM_FLAGS += "+firmware=custom/hello_world.hex"
+custom-vsim-run: vsim-all custom/$(CUSTOM_PROGRAM).hex
+custom-vsim-run: ALL_VSIM_FLAGS += "+firmware=custom/$(CUSTOM_PROGRAM).hex"
 custom-vsim-run: vsim-run
 
 .PHONY: custom-vsim-run-gui
-custom-vsim-run-gui: vsim-all custom/hello_world.hex
-custom-vsim-run-gui: ALL_VSIM_FLAGS += "+firmware=custom/hello_world.hex"
+custom-vsim-run-gui: vsim-all custom/$(CUSTOM_PROGRAM).hex
+custom-vsim-run-gui: ALL_VSIM_FLAGS += "+firmware=custom/$(CUSTOM_PROGRAM).hex"
 custom-vsim-run-gui: vsim-run-gui
 
 # Running custom fp programs:
@@ -269,8 +261,8 @@ custom_fp/main.elf: custom_fp/matmulNxN.c custom_fp/main.c
 		-static \
 		custom/crt0.S \
 		$^ custom/syscalls.c custom/vectors.S \
-		-I $(RISCV)/riscv32-unknown-elf/include \
-		-L $(RISCV)/riscv32-unknown-elf/lib \
+		-I $(RISCV)/$(RISCV_NAME)/include \
+		-L $(RISCV)/$(RISCV_NAME)/lib/rv32im/ilp32 \
 		-lc -lm -lgcc
 custom-fp-clean:
 	rm -rf custom_fp/main.elf custom_fp/main.hex
@@ -295,9 +287,9 @@ interrupt/interrupt.elf: interrupt/interrupt.c
 		-static \
 		custom/crt0.S \
 		$^ mem_stall/mem_stall.c custom/syscalls.c interrupt/vectors.S \
-		-I $(RISCV)/riscv32-unknown-elf/include \
+		-I $(RISCV)/$(RISCV_NAME)/include \
 		-I mem_stall/ \
-		-L $(RISCV)/riscv32-unknown-elf/lib \
+		-L $(RISCV)/$(RISCV_NAME)/lib/rv32im/ilp32 \
 		-lc -lm -lgcc
 interrupt-clean:
 	rm -rf interrupt/interrupt.elf interrupt/interrupt.hex
@@ -324,9 +316,9 @@ hwlp_test/hwlp_test.elf: hwlp_test/hwlp_test.c
 		-static \
 		custom/crt0.S \
 		$^ mem_stall/mem_stall.c custom/syscalls.c custom/vectors.S \
-		-I $(RISCV)/riscv32-unknown-elf/include \
+		-I $(RISCV)/$(RISCV_NAME)/include \
 		-I mem_stall \
-		-L $(RISCV)/riscv32-unknown-elf/lib \
+		-L $(RISCV)/$(RISCV_NAME)/lib/rv32im/ilp32 \
 		-lc -lm -lgcc
 hwlp-clean:
 	rm -rf hwlp_test/hwlp_test.elf hwlp_test/hwlp_test.hex
@@ -355,7 +347,7 @@ veri-build: .veri-build
 		$(RTLSRC_HOME)/bhv/cv32e40p_core_log.sv \
 		--Mdir $(VERI_OBJ) \
 		-CFLAGS "-std=gnu++14 $(VERI_CFLAGS)" \
-		$(VERI_COMPILE_FLAGS)
+		$(ALL_VERI_COMPILE_FLAGS)
 	rm -f .veri-build-pulp
 	touch .veri-build
 
@@ -372,7 +364,7 @@ veri-build-pulp: .veri-build-pulp
 		--Mdir $(VERI_OBJ) \
 		-CFLAGS "-std=gnu++14 $(VERI_CFLAGS)" \
 		-GCOREV_PULP=1 \
-		$(VERI_COMPILE_FLAGS)
+		$(ALL_VERI_COMPILE_FLAGS)
 	rm -f .veri-build
 	touch .veri-build-pulp
 
@@ -386,14 +378,9 @@ $(VERI_OBJ)/Vtb_top:
 	@echo "Ensure you perform a Verilator build before running."
 
 .PHONY: custom-veri-run
-custom-veri-run: veri-build custom/hello_world.hex
-custom-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/hello_world.hex"
+custom-veri-run: veri-build custom/$(CUSTOM_PROGRAM).hex
+custom-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/$(CUSTOM_PROGRAM).hex"
 custom-veri-run: veri-run
-
-.PHONY: happy-veri-run
-happy-veri-run: veri-build custom/happy.hex
-happy-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/happy.hex"
-happy-veri-run: veri-run
 
 # TODO: custom-fp-veri-run, requires new PULP-vendored FP library to compile
 
