@@ -37,11 +37,11 @@ module cv32e40p_decoder
   parameter FPU_ADDMUL_LAT    = 0,
   parameter FPU_OTHERS_LAT    = 0,
   parameter ZFINX             = 0,
+  parameter ZICFI             = 1,
   parameter PULP_SECURE       = 0,
   parameter USE_PMP           = 0,
   parameter APU_WOP_CPU       = 6,
-  parameter DEBUG_TRIGGER_EN  = 1,
-  parameter ZICFILP          = 0
+  parameter DEBUG_TRIGGER_EN  = 1
 )
 (
   // signals running to/from controller
@@ -162,7 +162,7 @@ module cv32e40p_decoder
   input  logic [31:0] mcounteren_i,
 
   // zicfilp
-  input  logic        zicfilp_enabled_i,
+  input  logic        lpe_i,
   output logic        is_lpad_o,
   output logic [19:0] lpad_label_o,
   output logic        is_indirect_call_jump_o
@@ -487,7 +487,7 @@ module cv32e40p_decoder
         alu_operator_o      = ALU_ADD;
         regfile_alu_we      = 1'b1;
         // when landing pad, suppress ALU write and get label
-        if (ZICFILP == 1 && instr_rdata_i[11:7] == 5'b0) begin
+        if ((ZICFI == 1) && (instr_rdata_i[11:7] == 5'b0)) begin
           is_lpad_o         = 1'b1;
           lpad_label_o      = instr_rdata_i[31:12];
           regfile_alu_we    = 1'b0;
@@ -2908,9 +2908,9 @@ module cv32e40p_decoder
                   csr_status_o = 1'b1;
                 end
 
-            // Zicfilp MLPE bit
+            // Machine security configuration
             CSR_MSECCFG :
-                if (ZICFILP == 0) begin
+                if (!ZICFI) begin
                   csr_illegal = 1'b1;
                 end else begin
                   csr_status_o = 1'b1;
@@ -3032,7 +3032,7 @@ module cv32e40p_decoder
   assign ctrl_transfer_insn_in_dec_o  = ctrl_transfer_insn;
 
   // is zicflip and in a jalr, and not to x1, x5, or x7
-  assign is_indirect_call_jump_o = (ZICFILP == 1) && zicfilp_enabled_i && (ctrl_transfer_insn_in_dec_o == BRANCH_JALR)
+  assign is_indirect_call_jump_o     = (ZICFI == 1) && lpe_i && (ctrl_transfer_insn_in_dec_o == BRANCH_JALR)
       && (instr_rdata_i[19:15] != 5'd1) && (instr_rdata_i[19:15] != 5'd5) && (instr_rdata_i[19:15] != 5'd7);
 
   assign regfile_alu_we_dec_o         = regfile_alu_we;

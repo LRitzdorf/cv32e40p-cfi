@@ -30,7 +30,8 @@ module cv32e40p_if_stage #(
     parameter PULP_OBI = 0,  // Legacy PULP OBI behavior
     parameter PULP_SECURE = 0,
     parameter FPU = 0,
-    parameter ZFINX = 0
+    parameter ZFINX = 0,
+    parameter ZICFI = 0  // Control-Flow Integrity extensions
 ) (
     input logic clk,
     input logic rst_n,
@@ -272,7 +273,8 @@ module cv32e40p_if_stage #(
 
   cv32e40p_compressed_decoder #(
       .FPU  (FPU),
-      .ZFINX(ZFINX)
+      .ZFINX(ZFINX),
+      .ZICFI(ZICFI)
   ) compressed_decoder_i (
       .instr_i        (instr_aligned),
       .instr_o        (instr_decompressed),

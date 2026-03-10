@@ -41,6 +41,7 @@ module cv32e40p_core_log #(
     parameter COREV_CLUSTER = 0,  // PULP Cluster interface (incl. cv.elw)
     parameter FPU = 0,  // Floating Point Unit (interfaced via APU interface)
     parameter ZFINX = 0,  // Float-in-General Purpose registers
+    parameter ZICFI = 0,  // Control-Flow Integrity extensions
     parameter NUM_MHPMCOUNTERS = 1
 ) (
     input logic        clk_i,
@@ -53,8 +54,8 @@ module cv32e40p_core_log #(
   // Log top level parameter values
   initial begin
     $display(
-        "[cv32e40p_core]: COREV_PULP = %d, COREV_CLUSTER = %d, FPU %d, ZFINX %d, NUM_MHPMCOUNTERS %d",
-        COREV_PULP, COREV_CLUSTER, FPU, ZFINX, NUM_MHPMCOUNTERS);
+        "[cv32e40p_core]: COREV_PULP = %d, COREV_CLUSTER = %d, FPU %d, ZFINX %d, ZICFI %d, NUM_MHPMCOUNTERS %d",
+        COREV_PULP, COREV_CLUSTER, FPU, ZFINX, ZICFI, NUM_MHPMCOUNTERS);
   end
 
   // Log illegal instructions

@@ -21,8 +21,8 @@ module cv32e40p_tb_subsystem #(
     parameter FPU_ADDMUL_LAT = 0,
     parameter FPU_OTHERS_LAT = 0,
     parameter ZFINX = 0,
+    parameter ZICFI = 0,
     parameter NUM_MHPMCOUNTERS = 1,
-    parameter ZICFILP = 1,
     parameter DM_HALTADDRESS = 32'h1A110800
 ) (
     input logic clk_i,
@@ -78,8 +78,8 @@ module cv32e40p_tb_subsystem #(
       .FPU_ADDMUL_LAT  (FPU_ADDMUL_LAT),
       .FPU_OTHERS_LAT  (FPU_OTHERS_LAT),
       .ZFINX           (ZFINX),
-      .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS),
-      .ZICFILP         (ZICFILP)
+      .ZICFI           (ZICFI),
+      .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS)
   ) top_i (
       .clk_i (clk_i),
       .rst_ni(rst_ni),

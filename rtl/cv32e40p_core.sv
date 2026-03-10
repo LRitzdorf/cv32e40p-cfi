@@ -37,8 +37,8 @@ module cv32e40p_core
     parameter FPU_ADDMUL_LAT = 0,  // Floating-Point ADDition/MULtiplication lane pipeline registers number
     parameter FPU_OTHERS_LAT = 0,  // Floating-Point COMParison/CONVersion lanes pipeline registers number
     parameter ZFINX = 0,  // Float-in-General Purpose registers
-    parameter NUM_MHPMCOUNTERS = 1,
-    parameter ZICFILP = 0  // Zicfilp extension
+    parameter ZICFI = 0,  // Control-Flow Integrity extensions
+    parameter NUM_MHPMCOUNTERS = 1
 ) (
     // Clock and Reset
     input logic clk_i,
@@ -307,7 +307,7 @@ module cv32e40p_core
 
   // HPM related control signals
   logic [             31:0]       mcounteren;
-  logic                           zicfilp_enabled;
+  logic                           lpe_state;
   logic                           elp_state;
   logic                           mpelp;
 
@@ -429,7 +429,8 @@ module cv32e40p_core
       .PULP_OBI   (PULP_OBI),
       .PULP_SECURE(PULP_SECURE),
       .FPU        (FPU),
-      .ZFINX      (ZFINX)
+      .ZFINX      (ZFINX),
+      .ZICFI      (ZICFI)
   ) if_stage_i (
       .clk  (clk),
       .rst_n(rst_ni),
@@ -525,12 +526,12 @@ module cv32e40p_core
       .FPU_ADDMUL_LAT  (FPU_ADDMUL_LAT),
       .FPU_OTHERS_LAT  (FPU_OTHERS_LAT),
       .ZFINX           (ZFINX),
+      .ZICFI           (ZICFI),
       .APU_NARGS_CPU   (APU_NARGS_CPU),
       .APU_WOP_CPU     (APU_WOP_CPU),
       .APU_NDSFLAGS_CPU(APU_NDSFLAGS_CPU),
       .APU_NUSFLAGS_CPU(APU_NUSFLAGS_CPU),
-      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN),
-      .ZICFILP         (ZICFILP)
+      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN)
   ) id_stage_i (
       .clk          (clk),  // Gated clock
       .clk_ungated_i(clk_i),  // Ungated clock
@@ -738,9 +739,10 @@ module cv32e40p_core
       .perf_imiss_i(perf_imiss),
       .mcounteren_i(mcounteren),
 
-      .zicfilp_enabled_i(zicfilp_enabled),
+      // Zicfilp control signals
+      .lpe_i  (lpe_state),
       .mpelp_i(mpelp),
-      .elp_o(elp_state)
+      .elp_o  (elp_state)
   );
 
 
@@ -959,6 +961,7 @@ module cv32e40p_core
       .A_EXTENSION     (A_EXTENSION),
       .FPU             (FPU),
       .ZFINX           (ZFINX),
+      .ZICFI           (ZICFI),
       .APU             (APU),
       .PULP_SECURE     (PULP_SECURE),
       .USE_PMP         (USE_PMP),
@@ -966,8 +969,7 @@ module cv32e40p_core
       .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS),
       .COREV_PULP      (COREV_PULP),
       .COREV_CLUSTER   (COREV_CLUSTER),
-      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN),
-      .ZICFILP         (ZICFILP)
+      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN)
   ) cs_registers_i (
       .clk  (clk),
       .rst_n(rst_ni),
@@ -1058,9 +1060,10 @@ module cv32e40p_core
       .apu_dep_i               (perf_apu_dep),
       .apu_wb_i                (perf_apu_wb),
 
-      .zicfilp_enabled_o       (zicfilp_enabled),
-      .elp_i                   (elp_state),
-      .mpelp_o                 (mpelp)
+      // Zicfilp control signals
+      .lpe_o  (lpe_state),
+      .elp_i  (elp_state),
+      .mpelp_o(mpelp)
   );
 
   //  CSR access

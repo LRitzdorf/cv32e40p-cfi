@@ -43,12 +43,12 @@ module cv32e40p_id_stage
     parameter FPU_ADDMUL_LAT = 0,
     parameter FPU_OTHERS_LAT = 0,
     parameter ZFINX = 0,
+    parameter ZICFI = 0,
     parameter APU_NARGS_CPU = 3,
     parameter APU_WOP_CPU = 6,
     parameter APU_NDSFLAGS_CPU = 15,
     parameter APU_NUSFLAGS_CPU = 5,
-    parameter DEBUG_TRIGGER_EN = 1,
-    parameter ZICFILP         = 0
+    parameter DEBUG_TRIGGER_EN = 1
 ) (
     input logic clk,  // Gated clock
     input logic clk_ungated_i,  // Ungated clock
@@ -255,7 +255,7 @@ module cv32e40p_id_stage
     input logic [31:0] mcounteren_i,
 
     // Zicfilp (Landing Pad) CFI
-    input  logic        zicfilp_enabled_i,
+    input  logic        lpe_i,
     input  logic        mpelp_i,
     output logic        elp_o
 );
@@ -310,8 +310,6 @@ module cv32e40p_id_stage
   logic        debug_wfi_no_sleep;
 
   // Zicfilp: ELP state and landing-pad check
-  localparam logic ELP_NO_LP_EXPECTED = 1'b0;
-  localparam logic ELP_LP_EXPECTED    = 1'b1;
   logic        elp_q, elp_d;
   logic        is_lpad;
   logic [19:0] lpad_label;
@@ -542,7 +540,7 @@ module cv32e40p_id_stage
   // register C mux
   // when zicflip, force a check of x7 for later lpad label check
   always_comb begin
-    if (ZICFILP == 1 && elp_q == ELP_LP_EXPECTED) begin
+    if ((ZICFI == 1) && (elp_q == ELP_LP_EXPECTED)) begin
       regfile_addr_rc_id = 6'd7;
     end else begin
       unique case (regc_mux)
@@ -759,21 +757,22 @@ module cv32e40p_id_stage
     ;  // case (operand_c_fw_mux_sel)
   end
 
-  assign take_indirect_jump = (ZICFILP == 1) && zicfilp_enabled_i && jump_taken && is_indirect_call_jump;
+  assign take_indirect_jump = (ZICFI == 1) && lpe_i && jump_taken && is_indirect_call_jump;
   assign exception_flush    = pc_set_o && (pc_mux_o == PC_EXCEPTION);
 
   assign is_valid_lpad_insn = is_lpad
       && (pc_id_i[1:0] == 2'b00)
       && ((lpad_label == 20'b0) || (lpad_label == operand_c_fw_id[31:12]));
 
-  assign lpad_fault = (ZICFILP == 1) && zicfilp_enabled_i
+  assign lpad_fault = (ZICFI == 1) && lpe_i
       && (elp_q == ELP_LP_EXPECTED) && instr_valid_i && !is_valid_lpad_insn;
 
   always_comb begin
-    if (ZICFILP == 0) begin
+    if (ZICFI == 0) begin
       elp_d = ELP_NO_LP_EXPECTED;
+    end else
     // restore saved state after trap
-    end else if (csr_restore_mret_id_o) begin
+    if (csr_restore_mret_id_o) begin
       elp_d = mpelp_i;
     end else if (take_indirect_jump) begin
       elp_d = ELP_LP_EXPECTED;
@@ -1039,11 +1038,11 @@ module cv32e40p_id_stage
       .FPU_ADDMUL_LAT  (FPU_ADDMUL_LAT),
       .FPU_OTHERS_LAT  (FPU_OTHERS_LAT),
       .ZFINX           (ZFINX),
+      .ZICFI           (ZICFI),
       .PULP_SECURE     (PULP_SECURE),
       .USE_PMP         (USE_PMP),
       .APU_WOP_CPU     (APU_WOP_CPU),
-      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN),
-      .ZICFILP         (ZICFILP)
+      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN)
   ) decoder_i (
       // controller related signals
       .deassert_we_i(deassert_we),
@@ -1161,9 +1160,9 @@ module cv32e40p_id_stage
       .mcounteren_i(mcounteren_i),
 
       // Zicfilp
-      .zicfilp_enabled_i    (zicfilp_enabled_i),
-      .is_lpad_o            (is_lpad),
-      .lpad_label_o         (lpad_label),
+      .lpe_i                  (lpe_i),
+      .is_lpad_o              (is_lpad),
+      .lpad_label_o           (lpad_label),
       .is_indirect_call_jump_o(is_indirect_call_jump)
 
   );

@@ -56,6 +56,7 @@ module cv32e40p_tb_wrapper
     parameter FPU_ADDMUL_LAT = 0,  // Floating-Point ADDition/MULtiplication computing lane pipeline registers number
     parameter FPU_OTHERS_LAT = 0,  // Floating-Point COMParison/CONVersion computing lanes pipeline registers number
     parameter ZFINX = 0,  // Float-in-General Purpose registers
+    parameter ZICFI = 0,  // Control-Flow Integrity extensions
     parameter NUM_MHPMCOUNTERS = 1
 ) (
     // Clock and Reset
@@ -126,6 +127,7 @@ module cv32e40p_tb_wrapper
       .COREV_CLUSTER   (COREV_CLUSTER),
       .FPU             (FPU),
       .ZFINX           (ZFINX),
+      .ZICFI           (ZICFI),
       .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS)
   ) core_log_i (
       .clk_i             (cv32e40p_top_i.core_i.id_stage_i.clk),
@@ -150,7 +152,8 @@ module cv32e40p_tb_wrapper
 `ifdef CV32E40P_TRACE_EXECUTION
   cv32e40p_tracer #(
       .FPU  (FPU),
-      .ZFINX(ZFINX)
+      .ZFINX(ZFINX),
+      .ZICFI(ZICFI)
   ) tracer_i (
       .clk_i(cv32e40p_top_i.core_i.clk_i),  // always-running clock for tracing
       .rst_n(cv32e40p_top_i.core_i.rst_ni),
@@ -240,6 +243,7 @@ module cv32e40p_tb_wrapper
   cv32e40p_rvfi #(
       .FPU(FPU),
       .ZFINX(ZFINX),
+      .ZICFI(ZICFI),
       .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS)
   ) rvfi_i (
       .clk_i (cv32e40p_top_i.core_i.clk_i),
@@ -452,7 +456,8 @@ module cv32e40p_tb_wrapper
 `ifdef CV32E40P_RVFI_TRACE_EXECUTION
   bind cv32e40p_rvfi: rvfi_i cv32e40p_rvfi_trace #(
       .FPU  (FPU),
-      .ZFINX(ZFINX)
+      .ZFINX(ZFINX),
+      .ZICFI(ZICFI)
   ) cv32e40p_tracer_i (
       .clk_i(clk_i),
       .rst_ni(rst_ni),
@@ -504,6 +509,7 @@ module cv32e40p_tb_wrapper
       .FPU_ADDMUL_LAT  (FPU_ADDMUL_LAT),
       .FPU_OTHERS_LAT  (FPU_OTHERS_LAT),
       .ZFINX           (ZFINX),
+      .ZICFI           (ZICFI),
       .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS)
   ) cv32e40p_top_i (
       .clk_i (clk_i),

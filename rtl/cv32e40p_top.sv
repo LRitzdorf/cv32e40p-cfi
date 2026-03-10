@@ -30,8 +30,8 @@ module cv32e40p_top #(
     parameter FPU_ADDMUL_LAT = 0,  // Floating-Point ADDition/MULtiplication computing lane pipeline registers number
     parameter FPU_OTHERS_LAT = 0,  // Floating-Point COMParison/CONVersion computing lanes pipeline registers number
     parameter ZFINX = 0,  // Float-in-General Purpose registers
-    parameter NUM_MHPMCOUNTERS = 1,
-    parameter ZICFILP = 0
+    parameter ZICFI = 0,  // Control-Flow Integrity extensions
+    parameter NUM_MHPMCOUNTERS = 1
 ) (
     // Clock and Reset
     input logic clk_i,
@@ -105,8 +105,8 @@ module cv32e40p_top #(
       .FPU_ADDMUL_LAT  (FPU_ADDMUL_LAT),
       .FPU_OTHERS_LAT  (FPU_OTHERS_LAT),
       .ZFINX           (ZFINX),
-      .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS),
-      .ZICFILP         (ZICFILP)
+      .ZICFI           (ZICFI),
+      .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS)
   ) core_i (
       .clk_i (clk_i),
       .rst_ni(rst_ni),

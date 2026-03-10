@@ -285,11 +285,13 @@ package cv32e40p_pkg;
     ///////////////////////////////////////////////////////
 
     // Machine trap setup
-    CSR_MSTATUS = 12'h300,
-    CSR_MISA    = 12'h301,
-    CSR_MIE     = 12'h304,
-    CSR_MTVEC   = 12'h305,
-    CSR_MSECCFG  = 12'h747,  // Zicfilp MLPE bit (when ZICFILP = 1)
+    CSR_MSTATUS  = 12'h300,
+    CSR_MISA     = 12'h301,
+    CSR_MIE      = 12'h304,
+    CSR_MTVEC    = 12'h305,
+
+    // Machine configuration
+    CSR_MSECCFG  = 12'h747,
 
     // Performance counters
     CSR_MCOUNTEREN    = 12'h306,
@@ -685,6 +687,10 @@ package cv32e40p_pkg;
   parameter AMO_MAX = 5'b10100;
   parameter AMO_MINU = 5'b11000;
   parameter AMO_MAXU = 5'b11100;
+
+  // Zicfilp statuses
+  parameter ELP_NO_LP_EXPECTED = 1'b0;
+  parameter ELP_LP_EXPECTED = 1'b1;
 
   ///////////////////////////////////////////////
   //   ___ _____   ____  _                     //

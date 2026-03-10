@@ -21,8 +21,8 @@ module tb_top #(
     parameter COREV_CLUSTER = 0,
     parameter FPU = 0,
     parameter ZFINX = 0,
+    parameter ZICFI = 0,
     parameter NUM_MHPMCOUNTERS = 1,
-    parameter ZICFILP = 1,
     parameter DM_HALTADDRESS = 32'h1A110800
 );
 
@@ -151,8 +151,8 @@ module tb_top #(
       .COREV_CLUSTER    (COREV_CLUSTER),
       .FPU              (FPU),
       .ZFINX            (ZFINX),
+      .ZICFI            (ZICFI),
       .NUM_MHPMCOUNTERS (NUM_MHPMCOUNTERS),
-      .ZICFILP          (ZICFILP),
       .DM_HALTADDRESS   (DM_HALTADDRESS)
   ) wrapper_i (
       .clk_i         (clk),

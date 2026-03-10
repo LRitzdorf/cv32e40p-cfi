@@ -32,6 +32,7 @@ module cv32e40p_rvfi
 #(
     parameter FPU   = 0,
     parameter ZFINX = 0,
+    parameter ZICFI = 0,
     parameter NUM_MHPMCOUNTERS = 1
 ) (
     input logic clk_i,
