@@ -102,6 +102,8 @@ sw_irq_handler:
 	csrr t0, mcause
 	slli t0, t0, 1  /* shift off the high bit */
 	srli t0, t0, 1
+	li t1, 18
+	beq t0, t1, handle_software_check
 	li t1, 2
 	beq t0, t1, handle_illegal_insn
 	li t1, 11
@@ -125,6 +127,28 @@ handle_illegal_insn:
 	jal ra, puts
 	j end_handler
 
+handle_software_check:
+	/* Disable Zicfilp while we call the stdlib puts function.
+	 * This can be removed if/when the standard library is built with landing pads.
+	 */
+	csrw mseccfg, 0
+	la a0, software_check_msg
+	jal ra, puts
+	csrr t0, mtval
+	li t1, 2
+	beq t0, t1, swcheck_lp_fault
+	li t1, 3
+	beq t0, t1, swcheck_ss_fault
+	j end_handler
+swcheck_lp_fault:
+	la a0, software_check_lp_msg
+	jal ra, puts
+	j end_handler
+swcheck_ss_fault:
+	la a0, software_check_ss_msg
+	jal ra, puts
+	j end_handler
+
 handle_unknown:
 	la a0, unknown_msg
 	jal ra, puts
@@ -140,6 +164,12 @@ verification_irq_handler:
 	mret
 
 .section .rodata
+software_check_msg:
+	.string "software check exception handler entered\n"
+software_check_lp_msg:
+	.string "    due to landing pad fault\n"
+software_check_ss_msg:
+	.string "    due to shadow stack fault\n"
 illegal_insn_msg:
 	.string "illegal instruction exception handler entered\n"
 ecall_msg:
