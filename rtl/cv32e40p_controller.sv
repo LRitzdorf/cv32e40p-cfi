@@ -60,6 +60,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
 
   input  logic        wfi_i,                      // decoder wants to execute a WFI
   input  logic        ebrk_insn_i,                // decoder encountered an ebreak instruction
+  input  logic        lpad_fault_i,               // lpad fault from id stage
   input  logic        fencei_insn_i,              // decoder encountered an fence.i instruction
   input  logic        csr_status_i,               // decoder encountered an csr status instruction
 
@@ -217,6 +218,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
   logic ebrk_force_debug_mode;
   logic is_hwlp_body;
   logic illegal_insn_q, illegal_insn_n;
+  logic lpad_fault_q, lpad_fault_n;
   logic debug_req_entry_q, debug_req_entry_n;
   logic debug_force_wakeup_q, debug_force_wakeup_n;
 
@@ -303,6 +305,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
     debug_mode_n           = debug_mode_q;
 
     illegal_insn_n         = illegal_insn_q;
+    lpad_fault_n           = lpad_fault_q;
     // a trap towards the debug unit is generated when one of the
     // following conditions are true:
     // - ebreak instruction encountered
@@ -535,6 +538,13 @@ module cv32e40p_controller import cv32e40p_pkg::*;
                   ctrl_fsm_ns       = id_ready_i ? FLUSH_EX : DECODE;
                   illegal_insn_n    = 1'b1;
 
+                end else if (lpad_fault_i) begin
+
+                  halt_if_o         = 1'b1;
+                  halt_id_o         = 1'b1;
+                  lpad_fault_n      = 1'b1;
+                  ctrl_fsm_ns       = FLUSH_EX;
+
                 end else begin
 
                   //decoding block
@@ -676,7 +686,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
                     // make sure the current instruction has been executed
                         unique case(1'b1)
 
-                        illegal_insn_i | ecall_insn_i:
+                        illegal_insn_i | ecall_insn_i | lpad_fault_i:
                         begin
                             ctrl_fsm_ns = FLUSH_EX;
                         end
@@ -862,7 +872,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
                     // make sure the current instruction has been executed
                         unique case(1'b1)
 
-                        illegal_insn_i | ecall_insn_i:
+                        illegal_insn_i | ecall_insn_i | lpad_fault_i:
                         begin
                             ctrl_fsm_ns = FLUSH_EX;
                         end
@@ -924,25 +934,29 @@ module cv32e40p_controller import cv32e40p_pkg::*;
           //check done to prevent data harzard in the CSR registers
           ctrl_fsm_ns = FLUSH_WB;
 
-          if(illegal_insn_q) begin
-            csr_save_id_o     = 1'b1;
-            csr_save_cause_o  = !debug_mode_q;
-            csr_cause_o       = {1'b0, EXC_CAUSE_ILLEGAL_INSN};
-          end else begin
-            unique case (1'b1)
-              ebrk_insn_i: begin
-                csr_save_id_o     = 1'b1;
-                csr_save_cause_o  = 1'b1;
-                csr_cause_o       = {1'b0, EXC_CAUSE_BREAKPOINT};
-              end
-              ecall_insn_i: begin
-                csr_save_id_o     = 1'b1;
-                csr_save_cause_o  = !debug_mode_q;
-                csr_cause_o       = {1'b0, current_priv_lvl_i == PRIV_LVL_U ? EXC_CAUSE_ECALL_UMODE : EXC_CAUSE_ECALL_MMODE};
-              end
-              default:;
-            endcase // unique case (1'b1)
-          end
+          unique case (1'b1)
+            lpad_fault_q: begin
+              csr_save_id_o     = 1'b1;
+              csr_save_cause_o  = !debug_mode_q;
+              csr_cause_o       = {1'b0, EXC_CAUSE_SOFTWARE_CHECK};
+            end
+            illegal_insn_q: begin
+              csr_save_id_o     = 1'b1;
+              csr_save_cause_o  = !debug_mode_q;
+              csr_cause_o       = {1'b0, EXC_CAUSE_ILLEGAL_INSN};
+            end
+            ebrk_insn_i: begin
+              csr_save_id_o     = 1'b1;
+              csr_save_cause_o  = 1'b1;
+              csr_cause_o       = {1'b0, EXC_CAUSE_BREAKPOINT};
+            end
+            ecall_insn_i: begin
+              csr_save_id_o     = 1'b1;
+              csr_save_cause_o  = !debug_mode_q;
+              csr_cause_o       = {1'b0, current_priv_lvl_i == PRIV_LVL_U ? EXC_CAUSE_ECALL_UMODE : EXC_CAUSE_ECALL_MMODE};
+            end
+            default:;
+          endcase // unique case (1'b1)
 
         end
       end
@@ -1041,7 +1055,15 @@ module cv32e40p_controller import cv32e40p_pkg::*;
 
         end
         else begin
-          if(illegal_insn_q) begin
+          if (lpad_fault_q) begin
+            pc_mux_o        = PC_EXCEPTION;
+            pc_set_o        = 1'b1;
+            trap_addr_mux_o = TRAP_MACHINE;
+            exc_pc_mux_o    = debug_mode_q ? EXC_PC_DBE : EXC_PC_EXCEPTION;
+            lpad_fault_n    = 1'b0;
+            if (debug_single_step_i && ~debug_mode_q)
+              ctrl_fsm_ns = DBG_TAKEN_IF;
+          end else if(illegal_insn_q) begin
               //exceptions
               pc_mux_o              = PC_EXCEPTION;
               pc_set_o              = 1'b1;
@@ -1440,6 +1462,7 @@ endgenerate
 
       debug_mode_q       <= 1'b0;
       illegal_insn_q     <= 1'b0;
+      lpad_fault_q       <= 1'b0;
 
       debug_req_entry_q  <= 1'b0;
       debug_force_wakeup_q <= 1'b0;
@@ -1456,6 +1479,7 @@ endgenerate
       debug_mode_q       <= debug_mode_n;
 
       illegal_insn_q     <= illegal_insn_n;
+      lpad_fault_q       <= lpad_fault_n;
 
       debug_req_entry_q  <= debug_req_entry_n;
       debug_force_wakeup_q <= debug_force_wakeup_n;

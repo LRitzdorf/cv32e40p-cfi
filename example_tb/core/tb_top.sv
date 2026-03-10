@@ -22,6 +22,7 @@ module tb_top #(
     parameter FPU = 0,
     parameter ZFINX = 0,
     parameter NUM_MHPMCOUNTERS = 1,
+    parameter ZICFILP = 1,
     parameter DM_HALTADDRESS = 32'h1A110800
 );
 
@@ -151,6 +152,7 @@ module tb_top #(
       .FPU              (FPU),
       .ZFINX            (ZFINX),
       .NUM_MHPMCOUNTERS (NUM_MHPMCOUNTERS),
+      .ZICFILP          (ZICFILP),
       .DM_HALTADDRESS   (DM_HALTADDRESS)
   ) wrapper_i (
       .clk_i         (clk),

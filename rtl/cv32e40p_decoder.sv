@@ -40,7 +40,8 @@ module cv32e40p_decoder
   parameter PULP_SECURE       = 0,
   parameter USE_PMP           = 0,
   parameter APU_WOP_CPU       = 6,
-  parameter DEBUG_TRIGGER_EN  = 1
+  parameter DEBUG_TRIGGER_EN  = 1,
+  parameter ZICFILP          = 0
 )
 (
   // signals running to/from controller
@@ -158,7 +159,13 @@ module cv32e40p_decoder
   output logic [1:0]  ctrl_transfer_target_mux_sel_o,        // jump target selection
 
   // HPM related control signals
-  input  logic [31:0] mcounteren_i
+  input  logic [31:0] mcounteren_i,
+
+  // zicfilp
+  input  logic        zicfilp_enabled_i,
+  output logic        is_lpad_o,
+  output logic [19:0] lpad_label_o,
+  output logic        is_indirect_call_jump_o
 );
 
   // write enable/request control
@@ -244,6 +251,9 @@ module cv32e40p_decoder
     hwlp_target_mux_sel_o          = 2'b0;
     hwlp_start_mux_sel_o           = 2'b0;
     hwlp_cnt_mux_sel_o             = 1'b0;
+
+    is_lpad_o                      = 1'b0;
+    lpad_label_o                   = 20'b0;
 
     csr_access_o                   = 1'b0;
     csr_status_o                   = 1'b0;
@@ -476,6 +486,12 @@ module cv32e40p_decoder
         imm_b_mux_sel_o     = IMMB_U;
         alu_operator_o      = ALU_ADD;
         regfile_alu_we      = 1'b1;
+        // when landing pad, suppress ALU write and get label
+        if (ZICFILP == 1 && instr_rdata_i[11:7] == 5'b0) begin
+          is_lpad_o         = 1'b1;
+          lpad_label_o      = instr_rdata_i[31:12];
+          regfile_alu_we    = 1'b0;
+        end
       end
 
       OPCODE_OPIMM: begin // Register-Immediate ALU Operations
@@ -2892,6 +2908,14 @@ module cv32e40p_decoder
                   csr_status_o = 1'b1;
                 end
 
+            // Zicfilp MLPE bit
+            CSR_MSECCFG :
+                if (ZICFILP == 0) begin
+                  csr_illegal = 1'b1;
+                end else begin
+                  csr_status_o = 1'b1;
+                end
+
             // Debug register access
             CSR_DCSR,
               CSR_DPC,
@@ -3006,6 +3030,11 @@ module cv32e40p_decoder
   assign ctrl_transfer_insn_in_id_o  = (deassert_we_i) ? BRANCH_NONE   : ctrl_transfer_insn;
 
   assign ctrl_transfer_insn_in_dec_o  = ctrl_transfer_insn;
+
+  // is zicflip and in a jalr, and not to x1, x5, or x7
+  assign is_indirect_call_jump_o = (ZICFILP == 1) && zicfilp_enabled_i && (ctrl_transfer_insn_in_dec_o == BRANCH_JALR)
+      && (instr_rdata_i[19:15] != 5'd1) && (instr_rdata_i[19:15] != 5'd5) && (instr_rdata_i[19:15] != 5'd7);
+
   assign regfile_alu_we_dec_o         = regfile_alu_we;
 
 endmodule // cv32e40p_decoder

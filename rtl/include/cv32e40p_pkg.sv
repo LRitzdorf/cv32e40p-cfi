@@ -289,6 +289,7 @@ package cv32e40p_pkg;
     CSR_MISA    = 12'h301,
     CSR_MIE     = 12'h304,
     CSR_MTVEC   = 12'h305,
+    CSR_MSECCFG  = 12'h747,  // Zicfilp MLPE bit (when ZICFILP = 1)
 
     // Performance counters
     CSR_MCOUNTEREN    = 12'h306,
@@ -720,6 +721,7 @@ package cv32e40p_pkg;
   parameter EXC_CAUSE_STORE_FAULT = 5'h07;
   parameter EXC_CAUSE_ECALL_UMODE = 5'h08;
   parameter EXC_CAUSE_ECALL_MMODE = 5'h0B;
+  parameter EXC_CAUSE_SOFTWARE_CHECK = 5'h12;  // Zicfilp landing-pad fault (cause 18)
 
   // Interrupt mask
   parameter IRQ_MASK = 32'hFFFF0888;

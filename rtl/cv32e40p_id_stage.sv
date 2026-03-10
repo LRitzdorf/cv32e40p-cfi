@@ -47,7 +47,8 @@ module cv32e40p_id_stage
     parameter APU_WOP_CPU = 6,
     parameter APU_NDSFLAGS_CPU = 15,
     parameter APU_NUSFLAGS_CPU = 5,
-    parameter DEBUG_TRIGGER_EN = 1
+    parameter DEBUG_TRIGGER_EN = 1,
+    parameter ZICFILP         = 0
 ) (
     input logic clk,  // Gated clock
     input logic clk_ungated_i,  // Ungated clock
@@ -251,7 +252,12 @@ module cv32e40p_id_stage
     output logic mhpmevent_pipe_stall_o,
 
     input logic        perf_imiss_i,
-    input logic [31:0] mcounteren_i
+    input logic [31:0] mcounteren_i,
+
+    // Zicfilp (Landing Pad) CFI
+    input  logic        zicfilp_enabled_i,
+    input  logic        mpelp_i,
+    output logic        elp_o
 );
 
   // Source/Destination register instruction index
@@ -302,6 +308,19 @@ module cv32e40p_id_stage
   logic        halt_if;
 
   logic        debug_wfi_no_sleep;
+
+  // Zicfilp: ELP state and landing-pad check
+  localparam logic ELP_NO_LP_EXPECTED = 1'b0;
+  localparam logic ELP_LP_EXPECTED    = 1'b1;
+  logic        elp_q, elp_d;
+  logic        is_lpad;
+  logic [19:0] lpad_label;
+  logic        is_indirect_call_jump;
+  logic        jump_taken;
+  logic        exception_flush;
+  logic        take_indirect_jump;
+  logic        is_valid_lpad_insn;
+  logic        lpad_fault;
 
   // Immediate decoding and sign extension
   logic [31:0] imm_i_type;
@@ -521,13 +540,18 @@ module cv32e40p_id_stage
   assign regfile_addr_rb_id = {regfile_fp_b, instr[REG_S2_MSB:REG_S2_LSB]};
 
   // register C mux
+  // when zicflip, force a check of x7 for later lpad label check
   always_comb begin
-    unique case (regc_mux)
-      REGC_ZERO: regfile_addr_rc_id = '0;
-      REGC_RD:   regfile_addr_rc_id = {regfile_fp_c, instr[REG_D_MSB:REG_D_LSB]};
-      REGC_S1:   regfile_addr_rc_id = {regfile_fp_c, instr[REG_S1_MSB:REG_S1_LSB]};
-      REGC_S4:   regfile_addr_rc_id = {regfile_fp_c, instr[REG_S4_MSB:REG_S4_LSB]};
-    endcase
+    if (ZICFILP == 1 && elp_q == ELP_LP_EXPECTED) begin
+      regfile_addr_rc_id = 6'd7;
+    end else begin
+      unique case (regc_mux)
+        REGC_ZERO: regfile_addr_rc_id = '0;
+        REGC_RD:   regfile_addr_rc_id = {regfile_fp_c, instr[REG_D_MSB:REG_D_LSB]};
+        REGC_S1:   regfile_addr_rc_id = {regfile_fp_c, instr[REG_S1_MSB:REG_S1_LSB]};
+        REGC_S4:   regfile_addr_rc_id = {regfile_fp_c, instr[REG_S4_MSB:REG_S4_LSB]};
+      endcase
+    end
   end
 
   //---------------------------------------------------------------------------
@@ -734,6 +758,41 @@ module cv32e40p_id_stage
     endcase
     ;  // case (operand_c_fw_mux_sel)
   end
+
+  assign take_indirect_jump = (ZICFILP == 1) && zicfilp_enabled_i && jump_taken && is_indirect_call_jump;
+  assign exception_flush    = pc_set_o && (pc_mux_o == PC_EXCEPTION);
+
+  assign is_valid_lpad_insn = is_lpad
+      && (pc_id_i[1:0] == 2'b00)
+      && ((lpad_label == 20'b0) || (lpad_label == operand_c_fw_id[31:12]));
+
+  assign lpad_fault = (ZICFILP == 1) && zicfilp_enabled_i
+      && (elp_q == ELP_LP_EXPECTED) && instr_valid_i && !is_valid_lpad_insn;
+
+  always_comb begin
+    if (ZICFILP == 0) begin
+      elp_d = ELP_NO_LP_EXPECTED;
+    // restore saved state after trap
+    end else if (csr_restore_mret_id_o) begin
+      elp_d = mpelp_i;
+    end else if (take_indirect_jump) begin
+      elp_d = ELP_LP_EXPECTED;
+    end else if ((elp_q == ELP_LP_EXPECTED) && is_valid_lpad_insn) begin
+      elp_d = ELP_NO_LP_EXPECTED;
+    end else if (exception_flush) begin
+      elp_d = ELP_NO_LP_EXPECTED;
+    end else begin
+      elp_d = elp_q;
+    end
+  end
+
+  always_ff @(posedge clk, negedge rst_n)
+    if (!rst_n)
+      elp_q <= ELP_NO_LP_EXPECTED;
+    else
+      elp_q <= elp_d;
+
+  assign elp_o = elp_q;
 
 
   ///////////////////////////////////////////////////////////////////////////
@@ -983,7 +1042,8 @@ module cv32e40p_id_stage
       .PULP_SECURE     (PULP_SECURE),
       .USE_PMP         (USE_PMP),
       .APU_WOP_CPU     (APU_WOP_CPU),
-      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN)
+      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN),
+      .ZICFILP         (ZICFILP)
   ) decoder_i (
       // controller related signals
       .deassert_we_i(deassert_we),
@@ -1098,7 +1158,13 @@ module cv32e40p_id_stage
       .ctrl_transfer_target_mux_sel_o(ctrl_transfer_target_mux_sel),
 
       // HPM related control signals
-      .mcounteren_i(mcounteren_i)
+      .mcounteren_i(mcounteren_i),
+
+      // Zicfilp
+      .zicfilp_enabled_i    (zicfilp_enabled_i),
+      .is_lpad_o            (is_lpad),
+      .lpad_label_o         (lpad_label),
+      .is_indirect_call_jump_o(is_indirect_call_jump)
 
   );
 
@@ -1142,6 +1208,7 @@ module cv32e40p_id_stage
 
       .wfi_i        (wfi_insn_dec),
       .ebrk_insn_i  (ebrk_insn_dec),
+      .lpad_fault_i (lpad_fault),
       .fencei_insn_i(fencei_insn_dec),
       .csr_status_i (csr_status),
 
@@ -1282,6 +1349,7 @@ module cv32e40p_id_stage
       .perf_pipeline_stall_o(perf_pipeline_stall)
   );
 
+  assign jump_taken = pc_set_o && (pc_mux_o == PC_JUMP);
 
   ////////////////////////////////////////////////////////////////////////
   //  _____      _       _____             _             _ _            //

@@ -37,7 +37,8 @@ module cv32e40p_core
     parameter FPU_ADDMUL_LAT = 0,  // Floating-Point ADDition/MULtiplication lane pipeline registers number
     parameter FPU_OTHERS_LAT = 0,  // Floating-Point COMParison/CONVersion lanes pipeline registers number
     parameter ZFINX = 0,  // Float-in-General Purpose registers
-    parameter NUM_MHPMCOUNTERS = 1
+    parameter NUM_MHPMCOUNTERS = 1,
+    parameter ZICFILP = 0  // Zicfilp extension
 ) (
     // Clock and Reset
     input logic clk_i,
@@ -306,6 +307,9 @@ module cv32e40p_core
 
   // HPM related control signals
   logic [             31:0]       mcounteren;
+  logic                           zicfilp_enabled;
+  logic                           elp_state;
+  logic                           mpelp;
 
   // debug mode and dcsr configuration
   logic                           debug_mode;
@@ -525,7 +529,8 @@ module cv32e40p_core
       .APU_WOP_CPU     (APU_WOP_CPU),
       .APU_NDSFLAGS_CPU(APU_NDSFLAGS_CPU),
       .APU_NUSFLAGS_CPU(APU_NUSFLAGS_CPU),
-      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN)
+      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN),
+      .ZICFILP         (ZICFILP)
   ) id_stage_i (
       .clk          (clk),  // Gated clock
       .clk_ungated_i(clk_i),  // Ungated clock
@@ -731,7 +736,11 @@ module cv32e40p_core
       .mhpmevent_pipe_stall_o  (mhpmevent_pipe_stall),
 
       .perf_imiss_i(perf_imiss),
-      .mcounteren_i(mcounteren)
+      .mcounteren_i(mcounteren),
+
+      .zicfilp_enabled_i(zicfilp_enabled),
+      .mpelp_i(mpelp),
+      .elp_o(elp_state)
   );
 
 
@@ -957,7 +966,8 @@ module cv32e40p_core
       .NUM_MHPMCOUNTERS(NUM_MHPMCOUNTERS),
       .COREV_PULP      (COREV_PULP),
       .COREV_CLUSTER   (COREV_CLUSTER),
-      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN)
+      .DEBUG_TRIGGER_EN(DEBUG_TRIGGER_EN),
+      .ZICFILP         (ZICFILP)
   ) cs_registers_i (
       .clk  (clk),
       .rst_n(rst_ni),
@@ -1046,7 +1056,11 @@ module cv32e40p_core
       .apu_typeconflict_i      (perf_apu_type),
       .apu_contention_i        (perf_apu_cont),
       .apu_dep_i               (perf_apu_dep),
-      .apu_wb_i                (perf_apu_wb)
+      .apu_wb_i                (perf_apu_wb),
+
+      .zicfilp_enabled_o       (zicfilp_enabled),
+      .elp_i                   (elp_state),
+      .mpelp_o                 (mpelp)
   );
 
   //  CSR access

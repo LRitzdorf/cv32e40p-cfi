@@ -80,8 +80,10 @@ RTLSRC_VERI		:= tb_top.sv \
 			   dp_ram.sv
 
 # riscv toolchain install path
-RISCV                    ?= ~/.riscv
-RISCV_EXE_PREFIX         ?= $(RISCV)/bin/riscv32-unknown-elf-
+# RISCV                    ?= ~/.riscv
+# RISCV_EXE_PREFIX         ?= $(RISCV)/bin/riscv32-unknown-elf-
+RISCV                    ?= /opt/homebrew/opt/riscv-gnu-toolchain
+RISCV_EXE_PREFIX         ?= $(RISCV)/bin/riscv64-unknown-elf-
 
 # assume vsim if no target chosen
 .DEFAULT_GOAL := custom-vsim-run
@@ -221,7 +223,19 @@ tb-clean-fp: tb-clean
 # We link with our custom crt0.s and syscalls.c against newlib so that we can
 # use the c standard library
 custom/hello_world.elf: custom/hello_world.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -fcf-protection=branch -o $@ -w -Os -g -nostdlib \
+		$(CUSTOM_GCC_FLAGS) \
+		-T custom/link.ld \
+		-static \
+		custom/crt0.S \
+		$^ mem_stall/mem_stall.c custom/syscalls.c custom/vectors.S \
+		-I $(RISCV)/riscv32-unknown-elf/include \
+		-I mem_stall \
+		-L $(RISCV)/riscv32-unknown-elf/lib \
+		-lc -lm -lgcc
+
+custom/happy.elf: custom/happy.c
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -fcf-protection=branch -o $@ -w -Os -g -nostdlib \
 		$(CUSTOM_GCC_FLAGS) \
 		-T custom/link.ld \
 		-static \
@@ -232,7 +246,7 @@ custom/hello_world.elf: custom/hello_world.c
 		-L $(RISCV)/riscv32-unknown-elf/lib \
 		-lc -lm -lgcc
 custom-clean:
-	rm -rf custom/hello_world.elf custom/hello_world.hex
+	rm -rf custom/*.elf custom/*.hex
 
 .PHONY: custom-vsim-run
 custom-vsim-run: vsim-all custom/hello_world.hex
@@ -375,6 +389,11 @@ $(VERI_OBJ)/Vtb_top:
 custom-veri-run: veri-build custom/hello_world.hex
 custom-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/hello_world.hex"
 custom-veri-run: veri-run
+
+.PHONY: happy-veri-run
+happy-veri-run: veri-build custom/happy.hex
+happy-veri-run: ALL_VERI_EXE_FLAGS += "+firmware=custom/happy.hex"
+happy-veri-run: veri-run
 
 # TODO: custom-fp-veri-run, requires new PULP-vendored FP library to compile
 
