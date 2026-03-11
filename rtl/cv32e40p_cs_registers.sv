@@ -139,9 +139,10 @@ module cv32e40p_cs_registers
     input logic apu_dep_i,
     input logic apu_wb_i,
 
+    // Zicfilp control signals
     input  logic elp_i,
     output logic lpe_o,
-    output logic mpelp_o
+    output logic pelp_o
 );
 
   localparam NUM_HPM_EVENTS = 16;
@@ -161,11 +162,11 @@ module cv32e40p_cs_registers
   localparam MSTATUS_SPP_BIT = 8;
   localparam MSTATUS_MPP_BIT_LOW = 11;
   localparam MSTATUS_MPP_BIT_HIGH = 12;
-  localparam MSTATUS_MPELP_BIT = 23;
   localparam MSTATUS_FS_BIT_LOW = 13;
   localparam MSTATUS_FS_BIT_HIGH = 14;
   localparam MSTATUS_MPRV_BIT = 17;
   localparam MSTATUS_SD_BIT = 31;
+  localparam MSTATUSH_MPELP_BIT = 9;
 
   // misa
   localparam logic [1:0] MXL = 2'd1;  // M-XLEN: XLEN in M-Mode for RV32
@@ -224,6 +225,7 @@ module cv32e40p_cs_registers
   FS_t mstatus_fs_q, mstatus_fs_n;
   logic [5:0] mcause_q, mcause_n;
   logic [5:0] ucause_q, ucause_n;
+  logic [31:0] mtval_q, mtval_n;
   logic [23:0] mtvec_n, mtvec_q;
   logic [23:0] utvec_n, utvec_q;
   logic [1:0] mtvec_mode_n, mtvec_mode_q;
@@ -247,7 +249,6 @@ module cv32e40p_cs_registers
   logic [31:0][31:0] mhpmevent_q, mhpmevent_n;  // event enable
   logic [31:0] mcounteren_q, mcounteren_n;  // user mode counter enable
   logic [31:0] mseccfg_q, mseccfg_n;
-  logic        mpelp_q, mpelp_n;
   logic [31:0] mcountinhibit_q, mcountinhibit_n;  // performance counter enable
   logic [NUM_HPM_EVENTS-1:0] hpm_events;  // events for performance counters
   logic [31:0][MHPMCOUNTER_WIDTH-1:0] mhpmcounter_increment;  // increment of mhpmcounter_q
@@ -308,7 +309,7 @@ module cv32e40p_cs_registers
         // mstatus
         CSR_MSTATUS:
         csr_rdata_int = {
-          (ZICFI == 1) ? {8'b0, mpelp_q, 5'b0} : 14'b0,
+          14'b0,
           mstatus_q.mprv,
           4'b0,
           mstatus_q.mpp,
@@ -319,6 +320,12 @@ module cv32e40p_cs_registers
           mstatus_q.mie,
           2'h0,
           mstatus_q.uie
+        };
+        CSR_MSTATUSH:
+        csr_rdata_int = {
+          22'b0,
+          (ZICFI == 1) ? mstatus_q.mpelp : 1'b0,
+          9'b0
         };
 
         // misa: machine isa register
@@ -337,6 +344,8 @@ module cv32e40p_cs_registers
         CSR_MEPC: csr_rdata_int = mepc_q;
         // mcause: exception cause
         CSR_MCAUSE: csr_rdata_int = {mcause_q[5], 26'b0, mcause_q[4:0]};
+        // mtval: exception value
+        CSR_MTVAL: csr_rdata_int = mtval_q;
         // mip: interrupt pending
         CSR_MIP: begin
           csr_rdata_int = mip;
@@ -352,7 +361,7 @@ module cv32e40p_cs_registers
         CSR_MARCHID: csr_rdata_int = MARCHID;
 
         // unimplemented, read 0 CSRs
-        CSR_MIMPID, CSR_MTVAL: csr_rdata_int = 'b0;
+        CSR_MIMPID: csr_rdata_int = 'b0;
 
         // mcounteren: Machine Counter-Enable
         CSR_MCOUNTEREN: csr_rdata_int = mcounteren_q;
@@ -477,7 +486,7 @@ module cv32e40p_cs_registers
         CSR_MSTATUS:
         csr_rdata_int = {
           (FPU == 1 && ZFINX == 0) ? (mstatus_fs_q == FS_DIRTY ? 1'b1 : 1'b0) : 1'b0,
-          (ZICFI == 1) ? {7'b0, mpelp_q, 5'b0} : 13'b0,
+          13'b0,
           mstatus_q.mprv,
           2'b0,
           (FPU == 1 && ZFINX == 0) ? mstatus_fs_q : FS_OFF,
@@ -489,6 +498,12 @@ module cv32e40p_cs_registers
           mstatus_q.mie,
           2'h0,
           mstatus_q.uie
+        };
+        CSR_MSTATUSH:
+        csr_rdata_int = {
+          22'b0,
+          (ZICFI == 1) ? mstatus_q.mpelp : 1'b0,
+          9'b0
         };
         // misa: machine isa register
         CSR_MISA: csr_rdata_int = MISA_VALUE;
@@ -505,6 +520,8 @@ module cv32e40p_cs_registers
         CSR_MEPC: csr_rdata_int = mepc_q;
         // mcause: exception cause
         CSR_MCAUSE: csr_rdata_int = {mcause_q[5], 26'b0, mcause_q[4:0]};
+        // mtval: exception value
+        CSR_MTVAL: csr_rdata_int = mtval_q;
         // mip: interrupt pending
         CSR_MIP: begin
           csr_rdata_int = mip;
@@ -523,8 +540,6 @@ module cv32e40p_cs_registers
           csr_rdata_int = (FPU == 1 || COREV_PULP == 1 || COREV_CLUSTER == 1) ? 32'h1 : 'b0;
         end
 
-        // unimplemented, read 0 CSRs
-        CSR_MTVAL: csr_rdata_int = 'b0;
         // mseccfg: Machine Security Configuration
         CSR_MSECCFG: csr_rdata_int = (ZICFI == 1) ? mseccfg_q : '0;
 
@@ -632,7 +647,7 @@ module cv32e40p_cs_registers
       mcause_n                = mcause_q;
       ucause_n                = ucause_q;
       mseccfg_n               = mseccfg_q;
-      mpelp_n                 = mpelp_q;
+      mtval_n                 = mtval_q;
       exception_pc            = pc_id_i;
       priv_lvl_n              = priv_lvl_q;
       mtvec_n                 = csr_mtvec_init_i ? mtvec_addr_i[31:8] : mtvec_q;
@@ -643,6 +658,7 @@ module cv32e40p_cs_registers
       pmp_reg_n.pmpcfg_packed = pmp_reg_q.pmpcfg_packed;
       pmpaddr_we              = '0;
       pmpcfg_we               = '0;
+      pelp_o                  = mstatus_q.mpelp;
 
       mie_n                   = mie_q;
 
@@ -662,14 +678,26 @@ module cv32e40p_cs_registers
         CSR_MSTATUS:
         if (csr_we_int) begin
           mstatus_n = '{
-              uie: csr_wdata_int[MSTATUS_UIE_BIT],
-              mie: csr_wdata_int[MSTATUS_MIE_BIT],
-              upie: csr_wdata_int[MSTATUS_UPIE_BIT],
-              mpie: csr_wdata_int[MSTATUS_MPIE_BIT],
-              mpp: PrivLvl_t'(csr_wdata_int[MSTATUS_MPP_BIT_HIGH:MSTATUS_MPP_BIT_LOW]),
-              mprv: csr_wdata_int[MSTATUS_MPRV_BIT]
+              uie:   csr_wdata_int[MSTATUS_UIE_BIT],
+              mie:   csr_wdata_int[MSTATUS_MIE_BIT],
+              upie:  csr_wdata_int[MSTATUS_UPIE_BIT],
+              mpie:  csr_wdata_int[MSTATUS_MPIE_BIT],
+              mpp:   PrivLvl_t'(csr_wdata_int[MSTATUS_MPP_BIT_HIGH:MSTATUS_MPP_BIT_LOW]),
+              mprv:  csr_wdata_int[MSTATUS_MPRV_BIT],
+              mpelp: mstatus_q.mpelp
           };
-          if (ZICFI == 1) mpelp_n = csr_wdata_int[MSTATUS_MPELP_BIT];
+        end
+        CSR_MSTATUSH:
+        if (csr_we_int) begin
+          mstatus_n = '{
+              uie:   mstatus_q.uie,
+              mie:   mstatus_q.mie,
+              upie:  mstatus_q.upie,
+              mpie:  mstatus_q.mpie,
+              mpp:   mstatus_q.mpp,
+              mprv:  mstatus_q.mprv,
+              mpelp: csr_wdata_int[MSTATUSH_MPELP_BIT]
+          };
         end
         // mie: machine interrupt enable
         CSR_MIE:
@@ -696,6 +724,8 @@ module cv32e40p_cs_registers
         CSR_MCAUSE: if (csr_we_int) mcause_n = {csr_wdata_int[31], csr_wdata_int[4:0]};
         // mseccfg
         CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {29'b0, csr_wdata_int[2], 2'b0};
+        // mtval
+        CSR_MTVAL: if ((ZICFI == 1) && csr_we_int) mtval_n = csr_wdata_int;
 
         // Debug
         CSR_DCSR:
@@ -706,14 +736,15 @@ module cv32e40p_cs_registers
           // - cause
           // - nmip
 
-          dcsr_n.ebreakm = csr_wdata_int[15];
-          dcsr_n.ebreaks = 1'b0;  // ebreaks (implemented as WARL)
-          dcsr_n.ebreaku = csr_wdata_int[12];
-          dcsr_n.stepie = csr_wdata_int[11];  // stepie
+          dcsr_n.pelp      = (ZICFI == 1) ? csr_wdata_int[18] : 1'b0;
+          dcsr_n.ebreakm   = csr_wdata_int[15];
+          dcsr_n.ebreaks   = 1'b0;  // ebreaks (implemented as WARL)
+          dcsr_n.ebreaku   = csr_wdata_int[12];
+          dcsr_n.stepie    = csr_wdata_int[11];  // stepie
           dcsr_n.stopcount = 1'b0;  // stopcount
-          dcsr_n.stoptime = 1'b0;  // stoptime
-          dcsr_n.mprven = 1'b0;  // mprven
-          dcsr_n.step = csr_wdata_int[2];
+          dcsr_n.stoptime  = 1'b0;  // stoptime
+          dcsr_n.mprven    = 1'b0;  // mprven
+          dcsr_n.step      = csr_wdata_int[2];
           dcsr_n.prv       = (PrivLvl_t'(csr_wdata_int[1:0]) == PRIV_LVL_M) ? PRIV_LVL_M : PRIV_LVL_U; // prv (implemented as WARL)
         end
 
@@ -816,7 +847,7 @@ module cv32e40p_cs_registers
                 if (debug_csr_save_i) depc_n = exception_pc;
                 else mepc_n = exception_pc;
                 mcause_n = csr_cause_i;
-                if (ZICFI == 1) mpelp_n = elp_i;
+                if (ZICFI == 1) mstatus_n.mpelp = elp_i;
 
               end else begin
                 if (~csr_irq_sec_i) begin
@@ -827,7 +858,6 @@ module cv32e40p_cs_registers
                   if (debug_csr_save_i) depc_n = exception_pc;
                   else uepc_n = exception_pc;
                   ucause_n = csr_cause_i;
-                  if (ZICFI == 1) mpelp_n = elp_i;
 
                 end else begin
                   //U --> M
@@ -838,7 +868,7 @@ module cv32e40p_cs_registers
                   if (debug_csr_save_i) depc_n = exception_pc;
                   else mepc_n = exception_pc;
                   mcause_n = csr_cause_i;
-                  if (ZICFI == 1) mpelp_n = elp_i;
+                  if (ZICFI == 1) mstatus_n.mpelp = elp_i;
                 end
               end
             end  //PRIV_LVL_U
@@ -858,7 +888,7 @@ module cv32e40p_cs_registers
                 mstatus_n.mpp  = PRIV_LVL_M;
                 mepc_n         = exception_pc;
                 mcause_n       = csr_cause_i;
-                if (ZICFI == 1) mpelp_n = elp_i;
+                if (ZICFI == 1) mstatus_n.mpelp = elp_i;
               end
             end  //PRIV_LVL_M
             default: ;
@@ -875,7 +905,7 @@ module cv32e40p_cs_registers
         end  //csr_restore_uret_i
 
         csr_restore_mret_i: begin  //MRET
-          if (ZICFI == 1) mpelp_n = 1'b0;
+          if (ZICFI == 1) mstatus_n.mpelp = 1'b0;
           unique case (mstatus_q.mpp)
             PRIV_LVL_U: begin
               mstatus_n.uie  = mstatus_q.mpie;
@@ -895,8 +925,9 @@ module cv32e40p_cs_registers
 
 
         csr_restore_dret_i: begin  //DRET
-          // Restore to the recorded privilege level
+          // Restore to the recorded privilege level and ELP status
           priv_lvl_n = dcsr_q.prv;
+          pelp_o     = dcsr_q.pelp;
 
         end  //csr_restore_dret_i
 
@@ -917,7 +948,6 @@ module cv32e40p_cs_registers
       mscratch_n = mscratch_q;
       mepc_n = mepc_q;
       mseccfg_n = mseccfg_q;
-      mpelp_n   = mpelp_q;
       uepc_n = 'b0;  // Not used if PULP_SECURE == 0
       depc_n = depc_q;
       dcsr_n = dcsr_q;
@@ -928,6 +958,7 @@ module cv32e40p_cs_registers
       mstatus_n = mstatus_q;
       mcause_n = mcause_q;
       ucause_n = '0;  // Not used if PULP_SECURE == 0
+      mtval_n = mtval_q;
       exception_pc = pc_id_i;
       priv_lvl_n = priv_lvl_q;
       mtvec_n = csr_mtvec_init_i ? mtvec_addr_i[31:8] : mtvec_q;
@@ -937,6 +968,7 @@ module cv32e40p_cs_registers
       pmp_reg_n.pmpcfg = '0;  // Not used if PULP_SECURE == 0
       pmpaddr_we = '0;
       pmpcfg_we = '0;
+      pelp_o = mstatus_q.mpelp;
 
       mie_n = mie_q;
       mtvec_mode_n = mtvec_mode_q;
@@ -977,18 +1009,30 @@ module cv32e40p_cs_registers
         CSR_MSTATUS:
         if (csr_we_int) begin
           mstatus_n = '{
-              uie: csr_wdata_int[MSTATUS_UIE_BIT],
-              mie: csr_wdata_int[MSTATUS_MIE_BIT],
-              upie: csr_wdata_int[MSTATUS_UPIE_BIT],
-              mpie: csr_wdata_int[MSTATUS_MPIE_BIT],
-              mpp: PrivLvl_t'(csr_wdata_int[MSTATUS_MPP_BIT_HIGH:MSTATUS_MPP_BIT_LOW]),
-              mprv: csr_wdata_int[MSTATUS_MPRV_BIT]
+              uie:   csr_wdata_int[MSTATUS_UIE_BIT],
+              mie:   csr_wdata_int[MSTATUS_MIE_BIT],
+              upie:  csr_wdata_int[MSTATUS_UPIE_BIT],
+              mpie:  csr_wdata_int[MSTATUS_MPIE_BIT],
+              mpp:   PrivLvl_t'(csr_wdata_int[MSTATUS_MPP_BIT_HIGH:MSTATUS_MPP_BIT_LOW]),
+              mprv:  csr_wdata_int[MSTATUS_MPRV_BIT],
+              mpelp: mstatus_q.mpelp
           };
-          if (ZICFI == 1) mpelp_n = csr_wdata_int[MSTATUS_MPELP_BIT];
           if (FPU == 1 && ZFINX == 0) begin
             mstatus_we_int = 1'b1;
             mstatus_fs_n   = FS_t'(csr_wdata_int[MSTATUS_FS_BIT_HIGH:MSTATUS_FS_BIT_LOW]);
           end
+        end
+        CSR_MSTATUSH:
+        if (csr_we_int) begin
+          mstatus_n = '{
+              uie:   mstatus_q.uie,
+              mie:   mstatus_q.mie,
+              upie:  mstatus_q.upie,
+              mpie:  mstatus_q.mpie,
+              mpp:   mstatus_q.mpp,
+              mprv:  mstatus_q.mprv,
+              mpelp: csr_wdata_int[MSTATUSH_MPELP_BIT]
+          };
         end
         // mie: machine interrupt enable
         CSR_MIE:
@@ -1015,6 +1059,8 @@ module cv32e40p_cs_registers
         CSR_MCAUSE: if (csr_we_int) mcause_n = {csr_wdata_int[31], csr_wdata_int[4:0]};
         // mseccfg
         CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {29'b0, csr_wdata_int[2], 2'b0};
+        // mtval: exception value
+        CSR_MTVAL: if ((ZICFI == 1) && csr_we_int) mtval_n = csr_wdata_int;
 
         CSR_DCSR:
         if (csr_we_int) begin
@@ -1024,6 +1070,7 @@ module cv32e40p_cs_registers
           // - cause
           // - nmip
 
+          dcsr_n.pelp      = (ZICFI == 1) ? csr_wdata_int[18] : 1'b0;
           dcsr_n.ebreakm   = csr_wdata_int[15];
           dcsr_n.ebreaks   = 1'b0;  // ebreaks (implemented as WARL)
           dcsr_n.ebreaku   = 1'b0;  // ebreaku (implemented as WARL)
@@ -1089,12 +1136,11 @@ module cv32e40p_cs_registers
             mstatus_n.mpp  = PRIV_LVL_M;
             mepc_n         = exception_pc;
             mcause_n       = csr_cause_i;
-            if (ZICFI == 1) mpelp_n = elp_i;
           end
         end  //csr_save_cause_i
 
         csr_restore_mret_i: begin  //MRET
-          if (ZICFI == 1) mpelp_n = 1'b0;
+          if (ZICFI == 1) mstatus_n.mpelp = 1'b0;
           mstatus_n.mie  = mstatus_q.mpie;
           priv_lvl_n     = PRIV_LVL_M;
           mstatus_n.mpie = 1'b1;
@@ -1104,6 +1150,7 @@ module cv32e40p_cs_registers
         csr_restore_dret_i: begin  //DRET
           // Restore to the recorded privilege level
           priv_lvl_n = dcsr_q.prv;
+          pelp_o     = dcsr_q.pelp;
         end  //csr_restore_dret_i
 
         default: ;
@@ -1150,8 +1197,6 @@ module cv32e40p_cs_registers
 
   assign mcounteren_o = PULP_SECURE ? mcounteren_q : '0;
   assign lpe_o = (ZICFI == 1) ? mseccfg_q[2] : 1'b0;
-
-  assign mpelp_o = mpelp_q;
 
   assign depc_o = depc_q;
 
@@ -1223,10 +1268,12 @@ module cv32e40p_cs_registers
           upie: 1'b0,
           mpie: 1'b0,
           mpp: PRIV_LVL_M,
-          mprv: 1'b0
+          mprv: 1'b0,
+          mpelp: 1'b0
       };
       mepc_q <= '0;
       mcause_q <= '0;
+      mtval_q <= '0;
 
       depc_q <= '0;
       dcsr_q <= '{
@@ -1259,11 +1306,13 @@ module cv32e40p_cs_registers
             upie: 1'b0,
             mpie: mstatus_n.mpie,
             mpp: PRIV_LVL_M,
-            mprv: 1'b0
+            mprv: 1'b0,
+            mpelp: mstatus_n.mpelp
         };
       end
       mepc_q       <= mepc_n;
       mcause_q     <= mcause_n;
+      mtval_q      <= mtval_n;
       depc_q       <= depc_n;
       dcsr_q       <= dcsr_n;
       dscratch0_q  <= dscratch0_n;
@@ -1554,11 +1603,6 @@ module cv32e40p_cs_registers
   always_ff @(posedge clk, negedge rst_n)
     if (!rst_n) mseccfg_q <= 'b0;
     else        mseccfg_q <= mseccfg_n;
-
-  //  Zicfilp ELP save across traps
-  always_ff @(posedge clk, negedge rst_n)
-    if (!rst_n) mpelp_q <= 1'b0;
-    else        mpelp_q <= mpelp_n;
 
   //  Inhibit Regsiter: mcountinhibit_q
   //  Note: implemented counters are disabled out of reset to save power

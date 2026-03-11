@@ -289,6 +289,7 @@ package cv32e40p_pkg;
     CSR_MISA     = 12'h301,
     CSR_MIE      = 12'h304,
     CSR_MTVEC    = 12'h305,
+    CSR_MSTATUSH = 12'h310,
 
     // Machine configuration
     CSR_MSECCFG  = 12'h747,
@@ -558,11 +559,14 @@ package cv32e40p_pkg;
     // logic[1:0] hpp; - unimplemented, hardwired to '0
     PrivLvl_t mpp;
     logic mprv;
+    logic mpelp;
   } Status_t;
 
   typedef struct packed {
     logic [31:28] xdebugver;
-    logic [27:16] zero2;
+    logic [27:19] zero3;
+    logic pelp;
+    logic [17:16] zero2;
     logic ebreakm;
     logic zero1;
     logic ebreaks;

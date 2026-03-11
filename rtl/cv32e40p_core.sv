@@ -309,7 +309,7 @@ module cv32e40p_core
   logic [             31:0]       mcounteren;
   logic                           lpe_state;
   logic                           elp_state;
-  logic                           mpelp;
+  logic                           pelp;
 
   // debug mode and dcsr configuration
   logic                           debug_mode;
@@ -740,9 +740,9 @@ module cv32e40p_core
       .mcounteren_i(mcounteren),
 
       // Zicfilp control signals
-      .lpe_i  (lpe_state),
-      .mpelp_i(mpelp),
-      .elp_o  (elp_state)
+      .lpe_i (lpe_state),
+      .pelp_i(pelp),
+      .elp_o (elp_state)
   );
 
 
@@ -1061,9 +1061,9 @@ module cv32e40p_core
       .apu_wb_i                (perf_apu_wb),
 
       // Zicfilp control signals
-      .lpe_o  (lpe_state),
-      .elp_i  (elp_state),
-      .mpelp_o(mpelp)
+      .lpe_o (lpe_state),
+      .elp_i (elp_state),
+      .pelp_o(pelp)
   );
 
   //  CSR access

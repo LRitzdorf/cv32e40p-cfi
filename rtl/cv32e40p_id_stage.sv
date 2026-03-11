@@ -256,7 +256,7 @@ module cv32e40p_id_stage
 
     // Zicfilp (Landing Pad) CFI
     input  logic        lpe_i,
-    input  logic        mpelp_i,
+    input  logic        pelp_i,
     output logic        elp_o
 );
 
@@ -771,9 +771,9 @@ module cv32e40p_id_stage
     if (ZICFI == 0) begin
       elp_d = ELP_NO_LP_EXPECTED;
     end else
-    // restore saved state after trap
-    if (csr_restore_mret_id_o) begin
-      elp_d = mpelp_i;
+    // restore saved state after trap/debug
+    if (csr_restore_mret_id_o || csr_restore_dret_id_o) begin
+      elp_d = pelp_i;
     end else if (take_indirect_jump) begin
       elp_d = ELP_LP_EXPECTED;
     end else if ((elp_q == ELP_LP_EXPECTED) && is_valid_lpad_insn) begin
