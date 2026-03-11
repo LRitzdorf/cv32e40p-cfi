@@ -1179,7 +1179,8 @@ module cv32e40p_id_stage
   cv32e40p_controller #(
       .COREV_CLUSTER(COREV_CLUSTER),
       .COREV_PULP   (COREV_PULP),
-      .FPU          (FPU)
+      .FPU          (FPU),
+      .ZICFI        (ZICFI)
   ) controller_i (
       .clk          (clk),  // Gated clock
       .clk_ungated_i(clk_ungated_i),  // Ungated clock

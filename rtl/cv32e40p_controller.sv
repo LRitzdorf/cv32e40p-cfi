@@ -50,6 +50,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
 
   input  logic        illegal_insn_i,             // decoder encountered an invalid instruction
   input  logic        ecall_insn_i,               // decoder encountered an ecall instruction
+  input  logic        lpad_fault_i,               // decoder encountered an lpad fault
   input  logic        mret_insn_i,                // decoder encountered an mret instruction
   input  logic        uret_insn_i,                // decoder encountered an uret instruction
 
@@ -61,7 +62,6 @@ module cv32e40p_controller import cv32e40p_pkg::*;
 
   input  logic        wfi_i,                      // decoder wants to execute a WFI
   input  logic        ebrk_insn_i,                // decoder encountered an ebreak instruction
-  input  logic        lpad_fault_i,               // lpad fault from id stage
   input  logic        fencei_insn_i,              // decoder encountered an fence.i instruction
   input  logic        csr_status_i,               // decoder encountered an csr status instruction
 
@@ -490,6 +490,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
           begin: blk_decode_level1 // now analyze the current instruction in the ID stage
 
             is_decoding_o = 1'b1;
+            lpad_fault_n = 1'b0;
             illegal_insn_n = 1'b0;
 
             if ( (debug_req_pending || trigger_match_i) & ~debug_mode_q )
@@ -536,7 +537,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
 
                   halt_if_o         = 1'b1;
                   halt_id_o         = 1'b1;
-                  ctrl_fsm_ns       = FLUSH_EX;
+                  ctrl_fsm_ns       = id_ready_i ? FLUSH_EX : DECODE;
                   lpad_fault_n      = 1'b1;
 
                 end else if (illegal_insn_i) begin
@@ -687,7 +688,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
                     // make sure the current instruction has been executed
                         unique case(1'b1)
 
-                        lpad_fault_i | illegal_insn_i | ecall_insn_i:
+                        (lpad_fault_i | illegal_insn_i | ecall_insn_i):
                         begin
                             ctrl_fsm_ns = FLUSH_EX;
                         end
@@ -773,7 +774,14 @@ module cv32e40p_controller import cv32e40p_pkg::*;
             else
               begin
 
-                if (illegal_insn_i) begin
+                if (lpad_fault_i) begin
+
+                  halt_if_o         = 1'b1;
+                  halt_id_o         = 1'b1;
+                  ctrl_fsm_ns       = FLUSH_EX;
+                  lpad_fault_n      = 1'b1;
+
+                end else if (illegal_insn_i) begin
 
                   halt_if_o         = 1'b1;
                   halt_id_o         = 1'b1;
@@ -856,7 +864,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
 
                     end
                   endcase // unique case (1'b1)
-                end // else: !if(illegal_insn_i)
+                end // else: !if(lpad_fault_i|illegal_insn_i)
 
                 if (debug_single_step_i & ~debug_mode_q) begin
                     // prevent any more instructions from executing
@@ -873,7 +881,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
                     // make sure the current instruction has been executed
                         unique case(1'b1)
 
-                        lpad_fault_i | illegal_insn_i | ecall_insn_i:
+                        (lpad_fault_i | illegal_insn_i | ecall_insn_i):
                         begin
                             ctrl_fsm_ns = FLUSH_EX;
                         end
@@ -929,13 +937,14 @@ module cv32e40p_controller import cv32e40p_pkg::*;
             ctrl_fsm_ns       = FLUSH_WB;
             //putting illegal to 0 as if it was 1, the core is going to jump to the exception of the EX stage,
             //so the illegal was never executed
+            lpad_fault_n      = 1'b0;
             illegal_insn_n    = 1'b0;
         end  //data erro
         else if (ex_valid_i) begin
           //check done to prevent data harzard in the CSR registers
           ctrl_fsm_ns = FLUSH_WB;
 
-          if ((ZICFI == 1) && lpad_fault_n) begin
+          if ((ZICFI == 1) && lpad_fault_q) begin
             csr_save_id_o     = 1'b1;
             csr_save_cause_o  = !debug_mode_q;
             csr_cause_o       = {1'b0, EXC_CAUSE_SOFTWARE_CHECK};
@@ -1368,7 +1377,7 @@ endgenerate
       deassert_we_o = 1'b1;
 
     // deassert WE in case of illegal instruction
-    if (illegal_insn_i)
+    if (lpad_fault_i | illegal_insn_i)
       deassert_we_o = 1'b1;
 
     // Stall because of load operation
