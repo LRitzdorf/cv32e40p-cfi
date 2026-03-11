@@ -324,7 +324,7 @@ module cv32e40p_cs_registers
         CSR_MSTATUSH:
         csr_rdata_int = {
           22'b0,
-          (ZICFI == 1) ? mstatus_q.mpelp : 1'b0,
+          (ZICFI == 1) ? mstatus_q.mpelp : ELP_NO_LP_EXPECTED,
           9'b0
         };
 
@@ -502,7 +502,7 @@ module cv32e40p_cs_registers
         CSR_MSTATUSH:
         csr_rdata_int = {
           22'b0,
-          (ZICFI == 1) ? mstatus_q.mpelp : 1'b0,
+          (ZICFI == 1) ? mstatus_q.mpelp : ELP_NO_LP_EXPECTED,
           9'b0
         };
         // misa: machine isa register
@@ -689,15 +689,9 @@ module cv32e40p_cs_registers
         end
         CSR_MSTATUSH:
         if (csr_we_int) begin
-          mstatus_n = '{
-              uie:   mstatus_q.uie,
-              mie:   mstatus_q.mie,
-              upie:  mstatus_q.upie,
-              mpie:  mstatus_q.mpie,
-              mpp:   mstatus_q.mpp,
-              mprv:  mstatus_q.mprv,
-              mpelp: csr_wdata_int[MSTATUSH_MPELP_BIT]
-          };
+          if (ZICFI == 1) begin
+            mstatus_n.mpelp = csr_wdata_int[MSTATUSH_MPELP_BIT];
+          end
         end
         // mie: machine interrupt enable
         CSR_MIE:
@@ -736,7 +730,7 @@ module cv32e40p_cs_registers
           // - cause
           // - nmip
 
-          dcsr_n.pelp      = (ZICFI == 1) ? csr_wdata_int[18] : 1'b0;
+          dcsr_n.pelp      = (ZICFI == 1) ? csr_wdata_int[18] : ELP_NO_LP_EXPECTED;
           dcsr_n.ebreakm   = csr_wdata_int[15];
           dcsr_n.ebreaks   = 1'b0;  // ebreaks (implemented as WARL)
           dcsr_n.ebreaku   = csr_wdata_int[12];
@@ -905,7 +899,10 @@ module cv32e40p_cs_registers
         end  //csr_restore_uret_i
 
         csr_restore_mret_i: begin  //MRET
-          if (ZICFI == 1) mstatus_n.mpelp = 1'b0;
+          if (ZICFI == 1) begin
+            pelp_o          = mstatus_q.mpelp;
+            mstatus_n.mpelp = ELP_NO_LP_EXPECTED;
+          end
           unique case (mstatus_q.mpp)
             PRIV_LVL_U: begin
               mstatus_n.uie  = mstatus_q.mpie;
@@ -926,8 +923,11 @@ module cv32e40p_cs_registers
 
         csr_restore_dret_i: begin  //DRET
           // Restore to the recorded privilege level and ELP status
-          priv_lvl_n = dcsr_q.prv;
-          pelp_o     = dcsr_q.pelp;
+          priv_lvl_n  = dcsr_q.prv;
+          if (ZICFI == 1) begin
+            pelp_o      = dcsr_q.pelp;
+            dcsr_n.pelp = ELP_NO_LP_EXPECTED;
+          end
 
         end  //csr_restore_dret_i
 
@@ -1024,15 +1024,9 @@ module cv32e40p_cs_registers
         end
         CSR_MSTATUSH:
         if (csr_we_int) begin
-          mstatus_n = '{
-              uie:   mstatus_q.uie,
-              mie:   mstatus_q.mie,
-              upie:  mstatus_q.upie,
-              mpie:  mstatus_q.mpie,
-              mpp:   mstatus_q.mpp,
-              mprv:  mstatus_q.mprv,
-              mpelp: csr_wdata_int[MSTATUSH_MPELP_BIT]
-          };
+          if (ZICFI == 1) begin
+            mstatus_n.mpelp = csr_wdata_int[MSTATUSH_MPELP_BIT];
+          end
         end
         // mie: machine interrupt enable
         CSR_MIE:
@@ -1070,7 +1064,7 @@ module cv32e40p_cs_registers
           // - cause
           // - nmip
 
-          dcsr_n.pelp      = (ZICFI == 1) ? csr_wdata_int[18] : 1'b0;
+          dcsr_n.pelp      = (ZICFI == 1) ? csr_wdata_int[18] : ELP_NO_LP_EXPECTED;
           dcsr_n.ebreakm   = csr_wdata_int[15];
           dcsr_n.ebreaks   = 1'b0;  // ebreaks (implemented as WARL)
           dcsr_n.ebreaku   = 1'b0;  // ebreaku (implemented as WARL)
@@ -1140,7 +1134,10 @@ module cv32e40p_cs_registers
         end  //csr_save_cause_i
 
         csr_restore_mret_i: begin  //MRET
-          if (ZICFI == 1) mstatus_n.mpelp = 1'b0;
+          if (ZICFI == 1) begin
+            pelp_o          = mstatus_q.mpelp;
+            mstatus_n.mpelp = ELP_NO_LP_EXPECTED;
+          end
           mstatus_n.mie  = mstatus_q.mpie;
           priv_lvl_n     = PRIV_LVL_M;
           mstatus_n.mpie = 1'b1;
@@ -1149,8 +1146,11 @@ module cv32e40p_cs_registers
 
         csr_restore_dret_i: begin  //DRET
           // Restore to the recorded privilege level
-          priv_lvl_n = dcsr_q.prv;
-          pelp_o     = dcsr_q.pelp;
+          priv_lvl_n  = dcsr_q.prv;
+          if (ZICFI == 1) begin
+            pelp_o      = dcsr_q.pelp;
+            dcsr_n.pelp = ELP_NO_LP_EXPECTED;
+          end
         end  //csr_restore_dret_i
 
         default: ;
@@ -1269,7 +1269,7 @@ module cv32e40p_cs_registers
           mpie: 1'b0,
           mpp: PRIV_LVL_M,
           mprv: 1'b0,
-          mpelp: 1'b0
+          mpelp: ELP_NO_LP_EXPECTED
       };
       mepc_q <= '0;
       mcause_q <= '0;
