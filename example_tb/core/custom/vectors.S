@@ -148,15 +148,20 @@ handle_illegal_insn:
 
 handle_software_check:
 	/* Software-check events should return back to the same instruction
-	 * that caused them, rather than one instruction later
+	 * that caused them, rather than one instruction later.
 	 */
 	csrr a0, mepc
 	addi a0, a0, -4
 	csrw mepc, a0
-	/* Disable Zicfilp while we call the stdlib puts function.
-	 * This can be removed if/when the standard library is built with landing pads.
+	/* Save security config state */
+	addi sp, sp, -16
+	csrr a0, mseccfg
+	sw a0, 8(sp)
+	/* Disable Zicfilp while we call the stdlib puts function. This can be
+	 * removed if/when the standard library is built with landing pads.
 	 */
-	csrw mseccfg, 0
+	andi a0, a0, ~(1 << 10)
+	csrw mseccfg, a0
 	la a0, software_check_msg
 	jal ra, puts
 	csrr t0, mtval
@@ -164,14 +169,20 @@ handle_software_check:
 	beq t0, t1, swcheck_lp_fault
 	li t1, 3
 	beq t0, t1, swcheck_ss_fault
-	j end_handler
+	j end_software_check
 swcheck_lp_fault:
 	la a0, software_check_lp_msg
 	jal ra, puts
-	j end_handler
+	j end_software_check
 swcheck_ss_fault:
 	la a0, software_check_ss_msg
 	jal ra, puts
+	j end_software_check
+end_software_check:
+	/* Restore security config state */
+	lw a0, 8(sp)
+	csrw mseccfg, a0
+	addi sp, sp, 16
 	j end_handler
 
 handle_unknown:
