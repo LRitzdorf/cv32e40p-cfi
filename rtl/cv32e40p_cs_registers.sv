@@ -115,6 +115,7 @@ module cv32e40p_cs_registers
     input logic                    csr_restore_dret_i,
     //coming from controller
     input logic [       5:0]       csr_cause_i,
+    input logic [      31:0]       csr_tval_i,
     //coming from controller
     input logic                    csr_save_cause_i,
     // Hardware loops
@@ -719,7 +720,7 @@ module cv32e40p_cs_registers
         // mseccfg
         CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {21'b0, csr_wdata_int[10], 10'b0};
         // mtval
-        CSR_MTVAL: if ((ZICFI == 1) && csr_we_int) mtval_n = csr_wdata_int;
+        CSR_MTVAL: if (csr_we_int) mtval_n = csr_wdata_int;
 
         // Debug
         CSR_DCSR:
@@ -841,6 +842,7 @@ module cv32e40p_cs_registers
                 if (debug_csr_save_i) depc_n = exception_pc;
                 else mepc_n = exception_pc;
                 mcause_n = csr_cause_i;
+                mtval_n  = csr_tval_i;
                 if (ZICFI == 1) mstatus_n.mpelp = elp_i;
 
               end else begin
@@ -862,6 +864,7 @@ module cv32e40p_cs_registers
                   if (debug_csr_save_i) depc_n = exception_pc;
                   else mepc_n = exception_pc;
                   mcause_n = csr_cause_i;
+                  mtval_n  = csr_tval_i;
                   if (ZICFI == 1) mstatus_n.mpelp = elp_i;
                 end
               end
@@ -882,6 +885,7 @@ module cv32e40p_cs_registers
                 mstatus_n.mpp  = PRIV_LVL_M;
                 mepc_n         = exception_pc;
                 mcause_n       = csr_cause_i;
+                mtval_n        = csr_tval_i;
                 if (ZICFI == 1) mstatus_n.mpelp = elp_i;
               end
             end  //PRIV_LVL_M
@@ -1054,7 +1058,7 @@ module cv32e40p_cs_registers
         // mseccfg
         CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {21'b0, csr_wdata_int[10], 10'b0};
         // mtval: exception value
-        CSR_MTVAL: if ((ZICFI == 1) && csr_we_int) mtval_n = csr_wdata_int;
+        CSR_MTVAL: if (csr_we_int) mtval_n = csr_wdata_int;
 
         CSR_DCSR:
         if (csr_we_int) begin
@@ -1130,6 +1134,7 @@ module cv32e40p_cs_registers
             mstatus_n.mpp  = PRIV_LVL_M;
             mepc_n         = exception_pc;
             mcause_n       = csr_cause_i;
+            mtval_n        = csr_tval_i;
           end
         end  //csr_save_cause_i
 

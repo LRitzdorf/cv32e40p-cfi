@@ -150,7 +150,8 @@ module cv32e40p_controller import cv32e40p_pkg::*;
   output logic        csr_save_if_o,
   output logic        csr_save_id_o,
   output logic        csr_save_ex_o,
-  output logic [5:0]  csr_cause_o,
+  output logic  [5:0] csr_cause_o,
+  output logic [31:0] csr_tval_o,
   output logic        csr_irq_sec_o,
   output logic        csr_restore_mret_id_o,
   output logic        csr_restore_uret_id_o,
@@ -279,6 +280,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
     trap_addr_mux_o        = TRAP_MACHINE;
 
     csr_cause_o            = '0;
+    csr_tval_o             = '0;
     csr_irq_sec_o          = 1'b0;
 
     pc_mux_o               = PC_BOOT;
@@ -948,6 +950,7 @@ module cv32e40p_controller import cv32e40p_pkg::*;
             csr_save_id_o     = 1'b1;
             csr_save_cause_o  = !debug_mode_q;
             csr_cause_o       = {1'b0, EXC_CAUSE_SOFTWARE_CHECK};
+            csr_tval_o        = TVAL_CODE_LPAD_FAULT;
           end else if(illegal_insn_q) begin
             csr_save_id_o     = 1'b1;
             csr_save_cause_o  = !debug_mode_q;

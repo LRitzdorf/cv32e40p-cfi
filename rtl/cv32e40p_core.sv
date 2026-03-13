@@ -300,6 +300,7 @@ module cv32e40p_core
   logic                           csr_save_id;
   logic                           csr_save_ex;
   logic [              5:0]       csr_cause;
+  logic [             31:0]       csr_tval;
   logic                           csr_restore_mret_id;
   logic                           csr_restore_uret_id;
   logic                           csr_restore_dret_id;
@@ -648,6 +649,7 @@ module cv32e40p_core
       .current_priv_lvl_i   (current_priv_lvl),
       .csr_irq_sec_o        (csr_irq_sec),
       .csr_cause_o          (csr_cause),
+      .csr_tval_o           (csr_tval),
       .csr_save_if_o        (csr_save_if),  // control signal to save pc
       .csr_save_id_o        (csr_save_id),  // control signal to save pc
       .csr_save_ex_o        (csr_save_ex),  // control signal to save pc
@@ -1036,6 +1038,7 @@ module cv32e40p_core
       .csr_restore_dret_i(csr_restore_dret_id),
 
       .csr_cause_i     (csr_cause),
+      .csr_tval_i      (csr_tval),
       .csr_save_cause_i(csr_save_cause),
 
       // from hwloop registers

@@ -692,6 +692,9 @@ package cv32e40p_pkg;
   parameter AMO_MINU = 5'b11000;
   parameter AMO_MAXU = 5'b11100;
 
+  // xTVAL status codes
+  parameter TVAL_CODE_LPAD_FAULT = 32'd2;
+
   // Zicfilp statuses
   parameter ELP_NO_LP_EXPECTED = 1'b0;
   parameter ELP_LP_EXPECTED = 1'b1;

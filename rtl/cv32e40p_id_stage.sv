@@ -164,6 +164,7 @@ module cv32e40p_id_stage
     input  PrivLvl_t          current_priv_lvl_i,
     output logic              csr_irq_sec_o,
     output logic        [5:0] csr_cause_o,
+    output logic       [31:0] csr_tval_o,
     output logic              csr_save_if_o,
     output logic              csr_save_id_o,
     output logic              csr_save_ex_o,
@@ -1292,6 +1293,7 @@ module cv32e40p_id_stage
       // CSR Controller Signals
       .csr_save_cause_o     (csr_save_cause_o),
       .csr_cause_o          (csr_cause_o),
+      .csr_tval_o           (csr_tval_o),
       .csr_save_if_o        (csr_save_if_o),
       .csr_save_id_o        (csr_save_id_o),
       .csr_save_ex_o        (csr_save_ex_o),
@@ -1797,7 +1799,8 @@ module cv32e40p_id_stage
                                            ((alu_operand_b_ex_o[11:0] != CSR_MSTATUS) && (alu_operand_b_ex_o[11:0] != CSR_USTATUS) &&
                                             (alu_operand_b_ex_o[11:0] != CSR_MEPC) && (alu_operand_b_ex_o[11:0] != CSR_UEPC) &&
                                             (alu_operand_b_ex_o[11:0] != CSR_MCAUSE) && (alu_operand_b_ex_o[11:0] != CSR_UCAUSE) &&
-                                            (alu_operand_b_ex_o[11:0] != CSR_MTVEC) && (alu_operand_b_ex_o[11:0] != CSR_UTVEC));
+                                            (alu_operand_b_ex_o[11:0] != CSR_MTVEC) && (alu_operand_b_ex_o[11:0] != CSR_UTVEC) &&
+                                            (alu_operand_b_ex_o[11:0] != CSR_MTVAL));
   endproperty
 
   a_irq_csr :

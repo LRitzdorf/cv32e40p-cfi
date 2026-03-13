@@ -2826,6 +2826,7 @@ module cv32e40p_decoder
             CSR_MSTATUS,
               CSR_MEPC,
               CSR_MTVEC,
+              CSR_MTVAL,
               CSR_MCAUSE :
                 // Not illegal, but treat as status CSR for side effect handling
                 csr_status_o = 1'b1;
@@ -2834,7 +2835,6 @@ module cv32e40p_decoder
             CSR_MISA,
               CSR_MIE,
               CSR_MSCRATCH,
-              CSR_MTVAL,
               CSR_MIP :
                 ; // do nothing, not illegal
 
