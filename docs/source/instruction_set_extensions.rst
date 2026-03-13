@@ -17,10 +17,15 @@
 
 .. _custom-isa-extensions:
 
-CORE-V Instruction Set Custom Extensions
-========================================
+CORE-V Instruction Set Extensions
+=================================
 
-CV32E40P supports the following CORE-V ISA X Custom Extensions, which can be enabled by setting ``COREV_PULP`` == 1.
+CV32E40P supports certain standard extensions that may be disabled if not required, for example to simplify hardware synthesis.
+
+For now, this is limited to Zicfilp (forward control-flow integrity).
+This may be enabled by setting ``ZICFI`` == 1, see :ref:`zicfi`.
+
+CV32E40P also supports the following CORE-V ISA X Custom Extensions, which can be enabled by setting ``COREV_PULP`` == 1.
 
  * Post-Increment load and stores, see :ref:`corev_load_store`, invoked in the tool chain with ``-march=rv32i*_xcvmem``.
  * Hardware Loop extension, see :ref:`corev_hardware_loop`, invoked in the tool chain with ``-march=rv32i*_xcvhwlp``.
@@ -43,6 +48,18 @@ To use such instructions, you need to compile your SW with the CORE-V GCC or Cla
 .. note::
 
   Clang/LLVM assembler will be supported by 30 June 2023, with builtin function support by 31 December 2023.
+
+.. _zicfi:
+
+Control-Flow Integrity
+----------------------
+
+TODO
+
+Useful links:
+
+ * `RISC-V Privileged ISA Specification for CFI <https://docs.riscv.org/reference/isa/priv/priv-cfi.html>`__
+ * `RISC-V Unprivileged ISA Specification for CFI <https://docs.riscv.org/reference/isa/unpriv/unpriv-cfi.html>`__
 
 .. _pseudo_instructions:
 

@@ -177,10 +177,6 @@ This requires querying the size of the ebreak instruction that was used to enter
 
 As mentioned in :ref:`hwloop-exceptions_handlers`, some additional cases exist for MEPC update when ebreak is the last instruction of an Hardware Loop.
 
-.. note::
-
-  The CV32E40P does not support MTVAL CSR register which would have saved the value of the instruction for exceptions. This may be supported on a future core.
-
 .. _ebreak_scenario_2:
 
 Scenario 2 : Enter Debug Mode

@@ -478,6 +478,10 @@ Detailed:
   | 2:0         | RO        | 0, Unimplemented.                                                                                                       |
   +-------------+-----------+-------------------------------------------------------------------------------------------------------------------------+
 
+.. hint::
+
+   For RV32 cores such as this, additional status bits may be available in :ref:`csr-mstatush`.
+
 .. note::
 
    As allowed by RISC-V ISA and to simplify MSTATUS.FS update in the design, the state is updated to Dirty when executing any F instructions except for all FSW ones.
@@ -588,6 +592,35 @@ handler using the content of the MTVEC[31:8] as base address. Only
 8-byte aligned addresses are allowed. Both direct mode and vectored mode
 are supported.
 
+.. _csr-mstatush:
+
+Machine Status High (``mstatush``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CSR Address: 0x310
+
+Reset Value: 0x0000_0000
+
+Detailed:
+
+.. table::
+  :widths: 15 15 70
+  :class: no-scrollbar-table
+
+  +-------------+-----------+-------------------------------------------------------------------------------------------------------------------------+
+  | **Bit #**   | **Mode**  | **Description**                                                                                                         |
+  +=============+===========+=========================================================================================================================+
+  | 31:10       | RO        | 0, Unimplemented.                                                                                                       |
+  +-------------+-----------+-------------------------------------------------------------------------------------------------------------------------+
+  | 9           | RW        | **MPELP:** Machine-mode Previous Expected Landing Pad                                                                   |
+  |             |           |                                                                                                                         |
+  |             |           | When in a trap, MPELP is set to 1 if machine-mode execution was expecting a landing pad before the trap occurred.       |
+  |             |           |                                                                                                                         |
+  |             |           | 0 if ``ZICFI`` = 0.                                                                                                     |
+  +-------------+-----------+-------------------------------------------------------------------------------------------------------------------------+
+  | 8:0         | RO        | 0, Unimplemented.                                                                                                       |
+  +-------------+-----------+-------------------------------------------------------------------------------------------------------------------------+
+
 Machine Scratch (``mscratch``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -678,7 +711,8 @@ Detailed:
   +-------------+-----------+------------------------------------------------------------------------+
   | **Bit #**   | **Mode**  | **Description**                                                        |
   +=============+===========+========================================================================+
-  | 31:0        | RO        | Writes are ignored; reads return 0.                                    |
+  | 31:0        | RO        | Writes are ignored; reads return 0 or an informative value defined by  |
+  |             |           | the extension that stipulated the exception be raised.                 |
   +-------------+-----------+------------------------------------------------------------------------+
 
 Machine Interrupt Pending register (``mip``)
@@ -963,7 +997,11 @@ Detailed:
   +===========+===========+=================================================================================================+
   | 31:28     | RO (0x4)  | **xdebugver:** returns 4 - External debug support exists as it is described in this document.   |
   +-----------+-----------+-------------------------------------------------------------------------------------------------+
-  | 27:16     | RO (0x0)  | Reserved                                                                                        |
+  | 27:19     | RO (0x0)  | Reserved                                                                                        |
+  +-----------+-----------+-------------------------------------------------------------------------------------------------+
+  | 18        | RW        | **pelp:** Previous Expected Landing Pad state. Always 0 if not built with ``ZICFI``.            |
+  +-----------+-----------+-------------------------------------------------------------------------------------------------+
+  | 17:16     | RO (0x0)  | Reserved                                                                                        |
   +-----------+-----------+-------------------------------------------------------------------------------------------------+
   | 15        | RW        | **ebreakm**                                                                                     |
   +-----------+-----------+-------------------------------------------------------------------------------------------------+
@@ -1458,6 +1496,7 @@ Writes are ignored and all bitfields in the ``misa`` CSR area read as 0 except f
 
 * **C** = 1
 * **F** = 1 if ``FPU`` = 1 and ``ZFINX`` = 0
+* **G** = 1 if ``ZICFI`` = 1
 * **I** = 1
 * **M** = 1
 * **X** = 1 if ``COREV_PULP`` = 1 or ``COREV_CLUSTER`` = 1

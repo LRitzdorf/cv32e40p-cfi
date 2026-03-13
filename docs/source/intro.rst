@@ -110,6 +110,10 @@ In addition, the following standard instruction set extensions are available.
      - 1.0
      - optionally enabled with the ``ZFINX`` parameter (also requires the ``FPU`` parameter)
 
+   * - **Zicfilp**: Forward Control-Flow Integrity
+     - 1.0
+     - optionally enabled with the ``ZICFI`` parameter
+
 The following custom instruction set extensions are available.
 
 .. list-table:: CV32E40P Custom Instruction Set Extensions

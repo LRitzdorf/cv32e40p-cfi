@@ -43,6 +43,7 @@ Instantiation Template
       .FPU_ADDMUL_LAT           ( 0 ),
       .FPU_OTHERS_LAT           ( 0 ),
       .ZFINX                    ( 0 ),
+      .ZICFI                    ( 0 ),
       .COREV_PULP               ( 0 ),
       .COREV_CLUSTER            ( 0 ),
       .NUM_MHPMCOUNTERS         ( 1 )
@@ -116,6 +117,10 @@ Parameters
   |                              |                |             | register file instead of requiring a dedicated Floating Point    |
   |                              |                |             | register file, see :ref:`fpu`. Only allowed to be set to 1       |
   |                              |                |             | if ``FPU`` = 1                                                   |
+  +------------------------------+----------------+-------------+------------------------------------------------------------------+
+  | ``ZICFI``                    | bit            | 0           | Enable the Forward Control-Flow Integrity (Landing Pad) ISA      |
+  |                              |                |             | extension for increased software security against control-flow   |
+  |                              |                |             | attacks, see :ref:`zicfi`                                        |
   +------------------------------+----------------+-------------+------------------------------------------------------------------+
   | ``COREV_PULP``               | bit            | 0           | Enable all of the custom PULP ISA extensions (except **cv.elw**) |
   |                              |                |             | (see :ref:`custom-isa-extensions`) and all custom CSRs           |
