@@ -258,6 +258,7 @@ package cv32e40p_pkg;
     // User trap handling
     CSR_UEPC   = 12'h041,  // Not included (PULP_SECURE = 0)
     CSR_UCAUSE = 12'h042,  // Not included (PULP_SECURE = 0)
+    CSR_UTVAL  = 12'h043,  // Not included (PULP_SECURE = 0)
 
     ///////////////////////////////////////////////////////
     // User Custom CSRs

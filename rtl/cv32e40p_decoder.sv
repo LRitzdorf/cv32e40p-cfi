@@ -2988,6 +2988,7 @@ module cv32e40p_decoder
             CSR_USTATUS,
               CSR_UEPC,
               CSR_UTVEC,
+              CSR_UTVAL,
               CSR_UCAUSE :
                 if (!PULP_SECURE) begin
                   csr_illegal = 1'b1;

@@ -227,6 +227,7 @@ module cv32e40p_cs_registers
   logic [5:0] mcause_q, mcause_n;
   logic [5:0] ucause_q, ucause_n;
   logic [31:0] mtval_q, mtval_n;
+  logic [31:0] utval_q, utval_n;
   logic [23:0] mtvec_n, mtvec_q;
   logic [23:0] utvec_n, utvec_q;
   logic [1:0] mtvec_mode_n, mtvec_mode_q;
@@ -467,6 +468,8 @@ module cv32e40p_cs_registers
         CSR_UEPC: csr_rdata_int = uepc_q;
         // ucause: exception cause
         CSR_UCAUSE: csr_rdata_int = {ucause_q[5], 26'h0, ucause_q[4:0]};
+        // utval: exception value
+        CSR_UTVAL: csr_rdata_int = utval_q;
 
         // current priv level (not official)
         CSR_PRIVLV: csr_rdata_int = !COREV_PULP ? 'b0 : {30'h0, priv_lvl_q};
@@ -649,6 +652,7 @@ module cv32e40p_cs_registers
       ucause_n                = ucause_q;
       mseccfg_n               = mseccfg_q;
       mtval_n                 = mtval_q;
+      utval_n                 = utval_q;
       exception_pc            = pc_id_i;
       priv_lvl_n              = priv_lvl_q;
       mtvec_n                 = csr_mtvec_init_i ? mtvec_addr_i[31:8] : mtvec_q;
@@ -816,6 +820,8 @@ module cv32e40p_cs_registers
         end
         // ucause: exception cause
         CSR_UCAUSE: if (csr_we_int) ucause_n = {csr_wdata_int[31], csr_wdata_int[4:0]};
+        // utval: exception value
+        CSR_UTVAL: if (csr_we_int) utval_n = csr_wdata_int;
       endcase
 
       // exception controller gets priority over other writes
@@ -854,6 +860,7 @@ module cv32e40p_cs_registers
                   if (debug_csr_save_i) depc_n = exception_pc;
                   else uepc_n = exception_pc;
                   ucause_n = csr_cause_i;
+                  utval_n  = csr_tval_i;
 
                 end else begin
                   //U --> M
@@ -963,6 +970,7 @@ module cv32e40p_cs_registers
       mcause_n = mcause_q;
       ucause_n = '0;  // Not used if PULP_SECURE == 0
       mtval_n = mtval_q;
+      utval_n = '0;  // Not used if PULP_SECURE == 0
       exception_pc = pc_id_i;
       priv_lvl_n = priv_lvl_q;
       mtvec_n = csr_mtvec_init_i ? mtvec_addr_i[31:8] : mtvec_q;
@@ -1236,12 +1244,14 @@ module cv32e40p_cs_registers
         if (rst_n == 1'b0) begin
           uepc_q       <= '0;
           ucause_q     <= '0;
+          utval_q      <= '0;
           utvec_q      <= '0;
           utvec_mode_q <= MTVEC_MODE;
           priv_lvl_q   <= PRIV_LVL_M;
         end else begin
           uepc_q       <= uepc_n;
           ucause_q     <= ucause_n;
+          utval_q      <= utval_n;
           utvec_q      <= utvec_n;
           utvec_mode_q <= utvec_mode_n;
           priv_lvl_q   <= priv_lvl_n;
@@ -1251,6 +1261,7 @@ module cv32e40p_cs_registers
       assign pmp_reg_q    = '0;
       assign uepc_q       = '0;
       assign ucause_q     = '0;
+      assign utval_q      = '0;
       assign utvec_q      = '0;
       assign utvec_mode_q = '0;
       assign priv_lvl_q   = PRIV_LVL_M;

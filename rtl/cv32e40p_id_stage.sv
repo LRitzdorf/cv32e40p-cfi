@@ -1800,7 +1800,7 @@ module cv32e40p_id_stage
                                             (alu_operand_b_ex_o[11:0] != CSR_MEPC) && (alu_operand_b_ex_o[11:0] != CSR_UEPC) &&
                                             (alu_operand_b_ex_o[11:0] != CSR_MCAUSE) && (alu_operand_b_ex_o[11:0] != CSR_UCAUSE) &&
                                             (alu_operand_b_ex_o[11:0] != CSR_MTVEC) && (alu_operand_b_ex_o[11:0] != CSR_UTVEC) &&
-                                            (alu_operand_b_ex_o[11:0] != CSR_MTVAL));
+                                            (alu_operand_b_ex_o[11:0] != CSR_MTVAL) && (alu_operand_b_ex_o[11:0] != CSR_UTVAL));
   endproperty
 
   a_irq_csr :
