@@ -11,7 +11,7 @@ static volatile binop_t ops[] = { add, sub, mul };
 int main(void)
 {
     /* Enable zicfilp */
-    __asm__ volatile("csrw mseccfg, %0" :: "r"(1 << 2));
+    __asm__ volatile("csrw mseccfg, %0" :: "r"(1 << 10));
 
     int r = (ops[0])(10, 3);
     r = (ops[1])(r, 5);

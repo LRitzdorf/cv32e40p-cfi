@@ -717,7 +717,7 @@ module cv32e40p_cs_registers
         // mcause
         CSR_MCAUSE: if (csr_we_int) mcause_n = {csr_wdata_int[31], csr_wdata_int[4:0]};
         // mseccfg
-        CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {29'b0, csr_wdata_int[2], 2'b0};
+        CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {21'b0, csr_wdata_int[10], 10'b0};
         // mtval
         CSR_MTVAL: if ((ZICFI == 1) && csr_we_int) mtval_n = csr_wdata_int;
 
@@ -1052,7 +1052,7 @@ module cv32e40p_cs_registers
         // mcause
         CSR_MCAUSE: if (csr_we_int) mcause_n = {csr_wdata_int[31], csr_wdata_int[4:0]};
         // mseccfg
-        CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {29'b0, csr_wdata_int[2], 2'b0};
+        CSR_MSECCFG: if ((ZICFI == 1) && csr_we_int) mseccfg_n = {21'b0, csr_wdata_int[10], 10'b0};
         // mtval: exception value
         CSR_MTVAL: if ((ZICFI == 1) && csr_we_int) mtval_n = csr_wdata_int;
 
@@ -1196,7 +1196,7 @@ module cv32e40p_cs_registers
   assign uepc_o = uepc_q;
 
   assign mcounteren_o = PULP_SECURE ? mcounteren_q : '0;
-  assign lpe_o = (ZICFI == 1) ? mseccfg_q[2] : 1'b0;
+  assign lpe_o = (ZICFI == 1) ? mseccfg_q[10] : 1'b0;
 
   assign depc_o = depc_q;
 
