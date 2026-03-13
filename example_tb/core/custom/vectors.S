@@ -99,6 +99,25 @@ __no_irq_handler:
 
 
 sw_irq_handler:
+	/* save all registers, even temporaries! */
+	addi sp, sp, -64
+	sw ra, 60(sp)
+	sw a0, 56(sp)
+	sw a1, 52(sp)
+	sw a2, 48(sp)
+	sw a3, 44(sp)
+	sw a4, 40(sp)
+	sw a5, 36(sp)
+	sw a6, 32(sp)
+	sw a7, 28(sp)
+	sw t0, 24(sp)
+	sw t1, 20(sp)
+	sw t2, 16(sp)
+	sw t3, 12(sp)
+	sw t4, 8(sp)
+	sw t5, 4(sp)
+	sw t6, 0(sp)
+	/* identify specific exception and respond */
 	csrr t0, mcause
 	slli t0, t0, 1  /* shift off the high bit */
 	srli t0, t0, 1
@@ -128,6 +147,12 @@ handle_illegal_insn:
 	j end_handler
 
 handle_software_check:
+	/* Software-check events should return back to the same instruction
+	 * that caused them, rather than one instruction later
+	 */
+	csrr a0, mepc
+	addi a0, a0, -4
+	csrw mepc, a0
 	/* Disable Zicfilp while we call the stdlib puts function.
 	 * This can be removed if/when the standard library is built with landing pads.
 	 */
@@ -158,6 +183,24 @@ end_handler:
 	csrr a0, mepc
 	addi a0, a0, 4
 	csrw mepc, a0
+	/* restore all registers, even temporaries! */
+	lw ra, 60(sp)
+	lw a0, 56(sp)
+	lw a1, 52(sp)
+	lw a2, 48(sp)
+	lw a3, 44(sp)
+	lw a4, 40(sp)
+	lw a5, 36(sp)
+	lw a6, 32(sp)
+	lw a7, 28(sp)
+	lw t0, 24(sp)
+	lw t1, 20(sp)
+	lw t2, 16(sp)
+	lw t3, 12(sp)
+	lw t4, 8(sp)
+	lw t5, 4(sp)
+	lw t6, 0(sp)
+	addi sp, sp, 64
 	mret
 /* this interrupt can be generated for verification purposes, random or when the PC is equal to a given value*/
 verification_irq_handler:
