@@ -243,7 +243,23 @@ module cv32e40p_compressed_decoder #(
 
           3'b011: begin
             if ({instr_i[12], instr_i[6:2]} == 6'b0) begin
-              illegal_instr_o = 1'b1;
+              // c.mop.n -> mop.r.n, x0, x0
+              // This mapping is arbitrary, and should be overridden by any
+              // extension that actually uses compressed MOPs.
+              // Also, note that mop.r.n accomodates 0 <= n <= 31, while
+              // c.mop.n only has space for ODD numbers in 0 <= n <= 15.
+              instr_o = {
+                1'b1,
+                1'b0,                // n[4]
+                2'b00,
+                instr_i[10:9],       // n[3:2]
+                4'b0111,
+                {instr_i[8], 1'b1},  // n[1:0]
+                5'b00000,            // rs1
+                3'b100,
+                5'b00000,            // rd
+                OPCODE_SYSTEM
+              };
             end else begin
               if (instr_i[11:7] == 5'h02) begin
                 // c.addi16sp -> addi x2, x2, nzimm
