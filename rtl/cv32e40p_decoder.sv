@@ -2768,6 +2768,27 @@ module cv32e40p_decoder
             endcase
           end else illegal_insn_o = 1'b1;
         end
+        else if (instr_rdata_i[14:12] == 3'b100)
+        begin
+          // Zimop "May-Be-Operation" instructions
+          if (instr_rdata_i[25]) begin
+            // MOP.RR.n
+            regc_used_o     = 1'b1;
+            regc_mux_o      = REGC_RD;
+            // Write zero to RD
+            alu_operator_o  = ALU_AND;
+            imm_a_mux_sel_o = IMMA_ZERO;
+            regfile_alu_we  = 1'b1;
+          end else begin
+            // MOP.R.n
+            regc_used_o     = 1'b1;
+            regc_mux_o      = REGC_RD;
+            // Write zero to RD
+            alu_operator_o  = ALU_AND;
+            imm_a_mux_sel_o = IMMA_ZERO;
+            regfile_alu_we  = 1'b1;
+          end
+        end
         else
         begin
           // instruction to read/modify CSR
