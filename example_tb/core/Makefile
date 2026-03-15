@@ -225,7 +225,7 @@ tb-clean-fp: tb-clean
 # We link with our custom crt0.s and syscalls.c against newlib so that we can
 # use the c standard library
 custom/%.elf: custom/%.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zicfilp_zimop_zcmop -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
 		$(CUSTOM_GCC_FLAGS) \
 		-T custom/link.ld \
 		-static \
@@ -254,7 +254,7 @@ custom-vsim-run-gui: vsim-run-gui
 # We link with our custom crt0.s and syscalls.c against newlib so that we can
 # use the c standard library
 custom_fp/main.elf: custom_fp/matmulNxN.c custom_fp/main.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imfc_zicsr -mabi=ilp32f -o $@ -w -g -nostdlib \
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imfc_zicsr_zimop_zcmop -mabi=ilp32f -o $@ -w -g -nostdlib \
 		$(CUSTOM_GCC_FLAGS) \
 		-T custom/link.ld  \
 		-static \
@@ -279,7 +279,7 @@ custom-fp-vsim-run-gui: vsim-run-gui-fp
 
 # compile and run interrupt
 interrupt/interrupt.elf: interrupt/interrupt.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
+	$(RISCV_EXE_PREFIX)gcc -march=rv32imc_zicsr_zimop_zcmop -mabi=ilp32 -o $@ -w -Os -g -nostdlib \
 		-Wno-int-conversion \
 		${CUSTOM_GCC_FLAGS} \
 		-T custom/link.ld  \
