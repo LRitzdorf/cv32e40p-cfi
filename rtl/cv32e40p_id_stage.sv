@@ -763,7 +763,7 @@ module cv32e40p_id_stage
 
   assign is_valid_lpad_insn = is_lpad
       && (pc_id_i[1:0] == 2'b00)
-      && ((lpad_label == 20'b0) || (lpad_label == operand_c_fw_id[31:12]));
+      && ((lpad_label == 20'b0) || (lpad_label == regfile_data_rc_id[31:12]));
 
   assign lpad_fault = (ZICFI == 1) && lpe_i
       && (elp_q == ELP_LP_EXPECTED) && instr_valid_i && !is_valid_lpad_insn;
